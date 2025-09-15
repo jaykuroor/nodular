@@ -15,30 +15,20 @@ export default function Composer({ bubbles, onSendMessage }: ComposerProps) {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (text.trim() && currentTargetId) {
+    if (text.trim()) {
       onSendMessage(text, currentTargetId);
       setText('');
     }
-  };
-
-  const handleAttachFile = () => {
-    // TBD: Logic to open file picker and handle uploads
-    console.log("Attaching file...");
-  };
-
-  const handleUseTemplate = () => {
-    // TBD: Logic to open a template selector modal
-    console.log("Using template...");
   };
 
   return (
     <footer className="flex-shrink-0 border-t border-slate-700 bg-slate-800/80 p-4">
       <div className="mx-auto max-w-4xl">
         <div className="glass-pane flex items-center gap-2 rounded-xl p-2">
-          <button onClick={handleAttachFile} title="Attach File" className="p-2 text-slate-400 hover:text-white">
+          <button title="Attach File" className="p-2 text-slate-400 hover:text-white">
             <Paperclip size={20} />
           </button>
-          <button onClick={handleUseTemplate} title="Use Template" className="p-2 text-slate-400 hover:text-white">
+          <button title="Use Template" className="p-2 text-slate-400 hover:text-white">
             <FileText size={20} />
           </button>
           <input
@@ -54,6 +44,7 @@ export default function Composer({ bubbles, onSendMessage }: ComposerProps) {
             onChange={(e) => setCurrentTargetId(e.target.value)}
             className="appearance-none rounded-md border-slate-600 bg-slate-700/50 p-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
+            <option value="">New Node</option>
             {bubbles.map((bubble) => (
               <option key={bubble.id} value={bubble.id}>
                 To: {bubble.title}
@@ -64,7 +55,7 @@ export default function Composer({ bubbles, onSendMessage }: ComposerProps) {
             type="submit"
             onClick={handleSubmit}
             className="rounded-lg bg-blue-600 p-2 text-white transition-colors hover:bg-blue-500 disabled:bg-slate-600"
-            disabled={!text.trim() || !currentTargetId}
+            disabled={!text.trim()}
           >
             <Send size={20} />
           </button>
