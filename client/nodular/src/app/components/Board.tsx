@@ -6,7 +6,8 @@ import Sidebar from './Sidebar';
 import BoardHeader from './BoardHeader';
 import ChatBubble from './ChatBubble';
 import Composer from './Composer';
-import BubbleMenu from './BubbleMenu';
+import { Xwrapper } from 'react-xarrows';
+import Xarrow from 'react-xarrows';
 
 // Expanded initial data for a richer demo
 const initialBoard: BoardState = {
@@ -55,7 +56,7 @@ export default function AppContainer() {
     // TBD: This state update should come from a backend response
     setBoardState(prev => ({
       ...prev,
-      bubbles: prev.bubbles.map(b => 
+      bubbles: prev.bubbles.map(b =>
         b.id === bubbleId ? { ...b, messages: [...b.messages, newMessage] } : b
       )
     }));
@@ -100,17 +101,37 @@ export default function AppContainer() {
       />
       <div className="flex flex-1 flex-col overflow-hidden">
         <BoardHeader boardName={boardState.name} />
-<main className="relative flex-1 overflow-auto p-8">
-  {/* Canvas for bubbles */}
-  {boardState.bubbles.map(bubble => (
-    <ChatBubble
-      key={bubble.id}
-      bubble={bubble}
-      onAddNode={handleAddNode}
-    />
-  ))}
-</main>
-<BubbleMenu/>
+        <main className="relative flex-1 overflow-auto p-8">
+          <Xwrapper>
+            {/* Canvas for bubbles */}
+            {boardState.bubbles.map(bubble => (
+              <ChatBubble
+                key={bubble.id}
+                bubble={bubble}
+                onAddNode={handleAddNode}
+              />
+            ))}
+            {/* Draw arrows */}
+            {boardState.bubbles.map(bubble => {
+              if (bubble.sourceMessageId) {
+                const sourceBubble = boardState.bubbles.find(b => b.messages.some(m => m.id === bubble.sourceMessageId));
+                if (sourceBubble) {
+                  return (
+                    <Xarrow
+                      key={`${sourceBubble.id}-${bubble.id}`}
+                      start={sourceBubble.id}
+                      end={bubble.id}
+                      color="gray"
+                      strokeWidth={2}
+                      path="grid"
+                    />
+                  );
+                }
+              }
+              return null;
+            })}
+          </Xwrapper>
+        </main>
         <Composer bubbles={boardState.bubbles} onSendMessage={handleSendMessage} />
       </div>
     </div>
