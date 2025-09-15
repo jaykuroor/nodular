@@ -16,3 +16,22 @@
     @apply bg-slate-800/50 backdrop-blur-lg border border-slate-700/50;
   }
 }
+
+/* Dotted Background */
+.main-chat-view {
+    position: relative;
+    overflow: hidden;
+}
+
+.main-chat-view::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: radial-gradient(circle, #4a4a4a 1px, rgba(0, 0, 0, 0) 1px);
+    background-size: 20px 20px;
+    opacity: 0.2;
+    z-index: -1;
+}
