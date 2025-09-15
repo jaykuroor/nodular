@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-900 text-slate-200;
+  }
+}
+
+/* Custom utility for the glassmorphism effect */
+@layer utilities {
+  .glass-pane {
+    @apply bg-slate-800/50 backdrop-blur-lg border border-slate-700/50;
+  }
+}
