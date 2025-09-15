@@ -9,14 +9,19 @@ export interface ChatBubbleType {
   id: string;
   title: string;
   messages: Message[];
-  sourceMessageId?: string; // ID of the message this bubble branches from
-  position: { x: number; y: number }; // Position on the canvas
+  sourceMessageId?: string;
+  position: { x: number; y: number };
+  file?: File;
+  isShrunk: boolean;
 }
+
+export type ViewMode = 'thread' | 'zoomed-out' | 'chart';
 
 export interface BoardState {
   id: string;
   name: string;
   bubbles: ChatBubbleType[];
+  viewMode: ViewMode;
 }
 
 export type LLMProvider = 'openai' | 'llama' | 'deepseek' | 'gemini';
