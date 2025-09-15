@@ -1,37 +1,32 @@
 @import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* v4: write normal CSS; no @layer needed */
+body { background-color: #0f172a; color: #e2e8f0; } /* slate-900 / slate-200 */
 
-@layer base {
-  body {
-    @apply bg-slate-900 text-slate-200;
-  }
-}
-
-/* Custom utility for the glassmorphism effect */
-@layer utilities {
-  .glass-pane {
-    @apply bg-slate-800/50 backdrop-blur-lg border border-slate-700/50;
-  }
+.glass-pane {
+  background-color: rgba(30, 41, 59, 0.5); /* slate-800/50 */
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(51, 65, 85, 0.5); /* slate-700/50 */
+  border-radius: 1rem;
 }
 
 /* Dotted Background */
 .main-chat-view {
-    position: relative;
-    overflow: hidden;
+  position: relative;
+  overflow: hidden;
 }
-
 .main-chat-view::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: radial-gradient(circle, #4a4a4a 1px, rgba(0, 0, 0, 0) 1px);
-    background-size: 20px 20px;
-    opacity: 0.2;
-    z-index: -1;
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 200%; height: 200%;
+  background-image: radial-gradient(circle, white 1px, rgba(0,0,0,0) 1px);
+  background-size: 20px 20px;
+  animation: pan-background 20s linear infinite;
+  z-index: -1;
+  pointer-events: none;
+}
+@keyframes pan-background {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(-50%, -50%); }
 }
