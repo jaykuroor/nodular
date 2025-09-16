@@ -1,5 +1,5 @@
 import { ChatBubbleType, ViewMode } from '../types';
-import { MoreHorizontal, MessageSquare, Maximize2, Minimize2, X, CloudUpload } from 'lucide-react';
+import { MoreHorizontal, MessageSquare, Maximize2, Minimize2, GripHorizontal, X, CloudUpload, Grip } from 'lucide-react';
 import MessageNode from './MessageNode';
 import FileNode from './FileNode';
 import { useEffect, useState } from 'react';
@@ -33,17 +33,19 @@ export default function ChatBubble({ bubble, onAddNode, onToggleShrink, viewMode
     return (
         <div
             id={bubble.id}
-            className={`glass-pane absolute flex flex-col rounded-xl shadow-2xl ${bgColor} ${bubble.type === 'file' && !isShrunk ? 'w-auto' : 'w-96'}`}
+            className={`glass-pane absolute flex flex-col rounded-xl shadow-2xl group ${bgColor} ${bubble.type === 'file' && !isShrunk ? 'max-w-210' : 'w-96'}`}
         >
             {bubble.sourceMessageId && (
                 <div className="absolute -left-1 top-1/2 h-8 w-2 -translate-y-1/2 rounded-full bg-white"></div>
             )}
 
-            <header className={`drag-handle cursor-pointer flex items-center justify-between rounded-t-xl border-slate-700/50 px-4 py-2 ${bubble.type == "file" ? 'bg-slate-850' : isUser ? 'bg-slate-850' : 'bg-blue-700'}`}>
+            <header className={`drag-handle cursor-pointer flex items-center justify-between rounded-t-xl border-slate-700/50 px-4 py-2 peer ${bubble.type == "file" ? 'bg-slate-850' : isUser ? 'bg-slate-850' : 'bg-blue-700'}`}>
                 {bubble.file ? <CloudUpload size ={16}/> : <MessageSquare size={16} className="text-blue-400" />}
                 {<div className="flex items-center gap-2 truncate">
+                    {<GripHorizontal size={16} className='opacity-40'/>}
                     <h3 className="text-sm font-semibold text-white truncate" title={bubble.title}>{bubble.type == "file" ? "File" : (isUser ? "You" : "Assistant")}</h3>
                 </div>}
+                
                 <div className="flex items-center gap-1">
                     {bubble.type != "file" && <button title={isShrunk ? "Expand" : "Shrink"} onClick={onToggleShrink} className="rounded p-1 text-slate-100 hover:bg-slate-700 hover:text-white">
                         {isShrunk ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
@@ -70,6 +72,7 @@ export default function ChatBubble({ bubble, onAddNode, onToggleShrink, viewMode
                     ))}
                     {bubble.type === 'file' && bubble.file && (
                         <>
+                            <div className={`absolute -left-1 top-1/2 h-8 w-2 -translate-y-1/2 opacity-20 rounded-full bg-white group-hover:opacity-100`}></div>
                             <FileNode
                                 fileName={bubble.file.name}
                                 isShrunk={isShrunk}
@@ -79,10 +82,10 @@ export default function ChatBubble({ bubble, onAddNode, onToggleShrink, viewMode
                             {!isShrunk && (
                                 <div className="p-4">
                                     {bubble.file.type.startsWith('image/') && (
-                                        <img src={bubble.fileUrl} alt={bubble.file.name} className="w-auto h-auto max-w-screen max-h-screen" />
+                                        <img src={bubble.fileUrl} alt={bubble.file.name} className="h-auto w-auto max-h-160 max-w-120" />
                                     )}
-                                    {(
-                                        <iframe src={bubble.fileUrl} title={bubble.file.name} className="w-auto h-auto max-w-screen max-h-screen" />
+                                    {!bubble.file.type.startsWith('image/') && (
+                                        <iframe src={bubble.fileUrl} title={bubble.file.name} className="h-auto w-auto min-w-180 min-h-60 max-h-280 max-w-210" />
                                     )}
                                 </div>
                             )}
