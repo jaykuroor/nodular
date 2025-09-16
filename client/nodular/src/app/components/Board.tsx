@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { BoardState, Message, ChatBubbleType, LLMProvider, ViewMode } from '../types';
 import Sidebar from './Sidebar';
 import BoardHeader from './BoardHeader';
@@ -103,6 +103,15 @@ export default function AppContainer() {
     // ... (rest of the function is the same)
   };
 
+  const fileUrlCache = useMemo(() => new Map<File, string>(), []);
+
+  const getFileUrl = (file: File) => {
+    if (!fileUrlCache.has(file)) {
+      fileUrlCache.set(file, URL.createObjectURL(file));
+    }
+    return fileUrlCache.get(file)!;
+  };
+
   const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const files = Array.from(e.dataTransfer.files);
@@ -114,8 +123,9 @@ export default function AppContainer() {
       messages: [],
       position: { x: e.clientX - transform.x, y: e.clientY - transform.y }, // Adjust for transform
       file,
-      isShrunk: false,
+      isShrunk: true,
       type: 'file',
+      fileUrl: getFileUrl(file),
     }));
 
     setBoardState(prev => ({

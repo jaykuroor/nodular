@@ -2,6 +2,7 @@ import { ChatBubbleType, ViewMode } from '../types';
 import { MoreHorizontal, MessageSquare, Maximize2, Minimize2, X, CloudUpload } from 'lucide-react';
 import MessageNode from './MessageNode';
 import FileNode from './FileNode';
+import { useEffect, useState } from 'react';
 
 interface ChatBubbleProps {
     bubble: ChatBubbleType;
@@ -16,16 +17,23 @@ export default function ChatBubble({ bubble, onAddNode, onToggleShrink, viewMode
     const isShrunk = bubble.isShrunk || (viewMode === 'map' && bubble.messages.length > 0);
     const isUser = bubble.messages[0]?.sender === 'user';
     const bgColor = bubble.type === 'file' ? 'bg-slate-800' : isUser ? 'bg-slate-600' : 'bg-blue-800';
+    const [textContent, setTextContent] = useState<string | null>(null);
 
+    useEffect(() => {
+        if (bubble.type === 'file' && bubble.file && bubble.file.type.startsWith('text/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setTextContent(e.target?.result as string);
+            };
+            reader.readAsText(bubble.file);
+        }
+    }, [bubble.file, bubble.type]);
 
-    const handleOpenFile = () => {
-
-    }
 
     return (
         <div
             id={bubble.id}
-            className={`glass-pane absolute flex w-96 flex-col rounded-xl shadow-2xl ${bgColor}`}
+            className={`glass-pane absolute flex flex-col rounded-xl shadow-2xl ${bgColor} ${bubble.type === 'file' && !isShrunk ? 'w-auto' : 'w-96'}`}
         >
             {bubble.sourceMessageId && (
                 <div className="absolute -left-1 top-1/2 h-8 w-2 -translate-y-1/2 rounded-full bg-white"></div>
@@ -68,11 +76,16 @@ export default function ChatBubble({ bubble, onAddNode, onToggleShrink, viewMode
                                 onOpen={onToggleShrink}
                                 onRemove={() => onRemove(bubble.id)}
                             />
-                            {!isShrunk && <iframe
-                                src={URL.createObjectURL(bubble.file)}
-                                title={bubble.file.name}
-                                className="flex-grow-1"
-                            ></iframe>}
+                            {!isShrunk && (
+                                <div className="p-4">
+                                    {bubble.file.type.startsWith('image/') && (
+                                        <img src={bubble.fileUrl} alt={bubble.file.name} className="w-auto h-auto max-w-screen max-h-screen" />
+                                    )}
+                                    {(
+                                        <iframe src={bubble.fileUrl} title={bubble.file.name} className="w-auto h-auto max-w-screen max-h-screen" />
+                                    )}
+                                </div>
+                            )}
                         </>
                     )}
                 </>
