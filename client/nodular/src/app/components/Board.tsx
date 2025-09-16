@@ -22,6 +22,7 @@ const initialBoard: BoardState = {
         { id: 'msg-1-1', text: 'What are the most popular state management libraries for React in 2025?', sender: 'user', timestamp: '4:01 PM' },
       ],
       isShrunk: false,
+      type: 'message',
     },
     {
       id: 'bubble-2',
@@ -32,6 +33,7 @@ const initialBoard: BoardState = {
         { id: 'msg-2-1', text: 'Tell me more about Zustand. Why is it gaining popularity?', sender: 'llm', timestamp: '4:03 PM' },
       ],
       isShrunk: false,
+      type: 'message',
     },
   ],
   viewMode: 'zoomed-out'
@@ -106,13 +108,14 @@ export default function AppContainer() {
     const files = Array.from(e.dataTransfer.files);
     if (files.length === 0) return;
 
-    const newBubbles = files.map((file, i) => ({
+    const newBubbles: ChatBubbleType[] = files.map((file, i) => ({
       id: `file-${Date.now()}-${i}`,
       title: file.name,
       messages: [],
-      position: { x: e.clientX, y: e.clientY },
+      position: { x: e.clientX - transform.x, y: e.clientY - transform.y }, // Adjust for transform
       file,
       isShrunk: false,
+      type: 'file',
     }));
 
     setBoardState(prev => ({
@@ -169,7 +172,7 @@ export default function AppContainer() {
           {showGuide && <Guide onClose={() => setShowGuide(false)} />}
           <div style={{ transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.k})`, transformOrigin: '0 0' }}>
             <Xwrapper>
-              {boardState.bubbles.map(bubble => (
+              {boardState.bubbles.map((bubble, index) => (
                 <DraggableBubble
                   key={bubble.id}
                   bubble={bubble}
@@ -178,6 +181,7 @@ export default function AppContainer() {
                   viewMode={boardState.viewMode}
                   onDrag={(e, data) => handleDrag(bubble.id, data)}
                   onRemove={removeBubble}
+                  isLastBubble={index === boardState.bubbles.length - 1}
                 />
               ))}
               {boardState.bubbles.map(bubble => {
