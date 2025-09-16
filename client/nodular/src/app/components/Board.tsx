@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { BoardState, Message, ChatBubbleType, LLMProvider, ViewMode } from '../types';
 import Sidebar from './Sidebar';
 import BoardHeader from './BoardHeader';
 import Composer from './Composer';
 import { Xwrapper } from 'react-xarrows';
 import Xarrow from 'react-xarrows';
-import DraggableBubble from './DraggableBubble'; // Import the new component
-import Guide from './Guide'; // We will create this next
+import DraggableBubble from './DraggableBubble';
+import Guide from './Guide';
 
 const initialBoard: BoardState = {
   id: 'board-1',
@@ -45,9 +45,40 @@ const allBoards = [
 
 export default function AppContainer() {
   const [boardState, setBoardState] = useState<BoardState>(initialBoard);
-  const [selectedLLM, setSelectedLLM] = useState<LLMProvider>('openai');
+  const [selectedLLM, setSelectedLLM] = useState<LLMProvider>('gpt-oss-120b');
   const [showGuide, setShowGuide] = useState(true);
   const boardRef = useRef<HTMLDivElement>(null);
+  const [transform, setTransform] = useState({ x: 0, y: 0, k: 1 });
+
+  useEffect(() => {
+    const board = boardRef.current;
+    if (!board) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (e.ctrlKey || e.shiftKey) {
+        const rect = board.getBoundingClientRect();
+        const s = Math.exp(-e.deltaY * 0.01);
+        const k = transform.k * s;
+
+        if (k < 0.1 || k > 2) return;
+
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        setTransform({
+          k,
+          x: transform.x * s + x * (1 - s),
+          y: transform.y * s + y * (1 - s),
+        });
+      } else {
+        setTransform(prev => ({ ...prev, x: prev.x - e.deltaX, y: prev.y - e.deltaY }));
+      }
+    };
+
+    board.addEventListener('wheel', handleWheel, { passive: false });
+    return () => board.removeEventListener('wheel', handleWheel);
+  }, [transform]);
 
   const handleDrag = (bubbleId: string, data: { x: number, y: number }) => {
     setBoardState(prev => ({
@@ -57,7 +88,7 @@ export default function AppContainer() {
       )
     }));
   };
-
+  
   const handleSendMessage = (text: string, bubbleId: string) => {
     // ... (rest of the function is the same)
   };
@@ -71,7 +102,23 @@ export default function AppContainer() {
   };
 
   const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    // ... (rest of the function is the same)
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+
+    const newBubbles = files.map((file, i) => ({
+      id: `file-${Date.now()}-${i}`,
+      title: file.name,
+      messages: [],
+      position: { x: e.clientX, y: e.clientY },
+      file,
+      isShrunk: false,
+    }));
+
+    setBoardState(prev => ({
+        ...prev,
+        bubbles: [...prev.bubbles, ...newBubbles]
+    }));
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -79,11 +126,23 @@ export default function AppContainer() {
   };
 
   const toggleShrink = (bubbleId: string) => {
-    // ... (rest of the function is the same)
+    setBoardState(prev => ({
+        ...prev,
+        bubbles: prev.bubbles.map(b =>
+            b.id === bubbleId ? { ...b, isShrunk: !b.isShrunk } : b
+        )
+    }));
   };
 
   const setViewMode = (mode: ViewMode) => {
     setBoardState(prev => ({ ...prev, viewMode: mode }));
+  };
+
+  const removeBubble = (bubbleId: string) => {
+    setBoardState(prev => ({
+      ...prev,
+      bubbles: prev.bubbles.filter(b => b.id !== bubbleId)
+    }));
   };
 
   return (
@@ -108,38 +167,41 @@ export default function AppContainer() {
           onDragOver={handleDragOver}
         >
           {showGuide && <Guide onClose={() => setShowGuide(false)} />}
-          <Xwrapper>
-            {boardState.bubbles.map(bubble => (
-              <DraggableBubble
-                key={bubble.id}
-                bubble={bubble}
-                onAddNode={handleAddNode}
-                onToggleShrink={() => toggleShrink(bubble.id)}
-                viewMode={boardState.viewMode}
-                onDrag={(e, data) => handleDrag(bubble.id, data)}
-              />
-            ))}
-            {boardState.bubbles.map(bubble => {
-              if (bubble.sourceMessageId) {
-                const sourceBubble = boardState.bubbles.find(b => b.messages.some(m => m.id === bubble.sourceMessageId));
-                if (sourceBubble) {
-                  return (
-                    <Xarrow
-                      key={`${sourceBubble.id}-${bubble.id}`}
-                      start={sourceBubble.id}
-                      end={bubble.id}
-                      color="white"
-                      showHead={false}
-                      strokeWidth={2}
-                      path="smooth"
-                      zIndex={0}
-                    />
-                  );
+          <div style={{ transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.k})`, transformOrigin: '0 0' }}>
+            <Xwrapper>
+              {boardState.bubbles.map(bubble => (
+                <DraggableBubble
+                  key={bubble.id}
+                  bubble={bubble}
+                  onAddNode={handleAddNode}
+                  onToggleShrink={() => toggleShrink(bubble.id)}
+                  viewMode={boardState.viewMode}
+                  onDrag={(e, data) => handleDrag(bubble.id, data)}
+                  onRemove={removeBubble}
+                />
+              ))}
+              {boardState.bubbles.map(bubble => {
+                if (bubble.sourceMessageId) {
+                  const sourceBubble = boardState.bubbles.find(b => b.messages.some(m => m.id === bubble.sourceMessageId));
+                  if (sourceBubble) {
+                    return (
+                      <Xarrow
+                        key={`${sourceBubble.id}-${bubble.id}`}
+                        start={sourceBubble.id}
+                        end={bubble.id}
+                        color="white"
+                        showHead={false}
+                        strokeWidth={2}
+                        path="smooth"
+                        zIndex={0}
+                      />
+                    );
+                  }
                 }
-              }
-              return null;
-            })}
-          </Xwrapper>
+                return null;
+              })}
+            </Xwrapper>
+          </div>
         </main>
         <Composer bubbles={boardState.bubbles} onSendMessage={handleSendMessage} />
       </div>
