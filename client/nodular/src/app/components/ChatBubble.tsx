@@ -1,6 +1,6 @@
 // MODIFIED: Added Link2Off to the import
 import { ChatBubbleType, ViewMode } from '../types';
-import { MoreHorizontal, MessageSquare, Maximize2, Minimize2, GripHorizontal, X, CloudUpload, Link2Off } from 'lucide-react';
+import { MoreHorizontal, MessageSquare, Maximize2, Minimize2, GripHorizontal, X, CloudUpload, Link2Off, TrendingUpDown } from 'lucide-react';
 import MessageNode from './MessageNode';
 import FileNode from './FileNode';
 import { useEffect, useState } from 'react';
@@ -24,6 +24,7 @@ export default function ChatBubble({ bubble, onAddNode, onToggleShrink, viewMode
     const isUser = bubble.messages[0]?.sender === 'user';
     const bgColor = bubble.type === 'file' ? 'bg-slate-800' : isUser ? 'bg-slate-600' : 'bg-blue-800';
     const [textContent, setTextContent] = useState<string | null>(null);
+    const [vertexShown, setVertexShown] = useState(false);
 
     useEffect(() => {
         if (bubble.type === 'file' && bubble.file && bubble.file.type.startsWith('text/')) {
@@ -58,7 +59,7 @@ export default function ChatBubble({ bubble, onAddNode, onToggleShrink, viewMode
     return (
         <div
             id={bubble.id}
-            className={`glass-pane absolute flex flex-col rounded-xl shadow-2xl group z-10 ${bgColor} ${bubble.type === 'file' && !isShrunk ? 'max-w-210' : 'w-96'} ${isConnecting && bubble.type === 'message' ? 'connectable-node connectable-node-active' : ''}`}
+            className={`glass-pane absolute flex flex-col shadow-2xl group z-20 ${vertexShown ? `mb-4 bg-red-900` : `bg-green-300 rounded-xl`} ${bgColor} ${bubble.type === 'file' && !isShrunk ? 'max-w-210' : 'w-96'} ${isConnecting && bubble.type === 'message' ? 'connectable-node connectable-node-active' : ''}`}
             onClick={handleConnectionEnd}
         >
             {/* MODIFIED: The connection handle now has conditional logic */}
@@ -71,14 +72,24 @@ export default function ChatBubble({ bubble, onAddNode, onToggleShrink, viewMode
                     {bubble.connectedTo && (
                         <Link2Off size={16} className="text-slate-800" />
                     )}
+                </div>)}
+            {bubble.type === 'message' && (
+                <div
+                    // If connected, show the disconnect button. Otherwise, show the connect button.
+                    onClick={() => {setVertexShown(!vertexShown)}}
+                    className={`absolute left-1/2 -bottom-1 ${vertexShown ? `h-8 w-full -bottom-8 rounded-b-xl` : `h-2 w-8 group-hover:-bottom-4 opacity-20 rounded-full group-hover:rounded-xl`} -translate-x-1/2 flex justify-center items-center bg-white group-hover:opacity-100 transition-all hover:drop-shadow-glow hover:cursor-pointer group-hover:h-8`}
+                > <TrendingUpDown size={16} strokeWidth={3} className={` ${vertexShown ? `opacity-80 hover:opacity-100 right-4` : `invisible group-hover:visible` } text-slate-800 font-bold absolute`} />
+                    {bubble.connectedTo && (
+                        <Link2Off size={16} className="text-slate-800" />
+                    )}
                 </div>
             )}
 
 
             <header className={`drag-handle cursor-pointer flex items-center justify-between rounded-t-xl border-slate-700/50 px-4 py-2 peer ${bubble.type == "file" ? 'bg-slate-850' : isUser ? 'bg-slate-850' : 'bg-blue-700'}`}>
-                {bubble.file ? <CloudUpload size ={16}/> : <MessageSquare size={16} className="text-blue-400" />}
+                {bubble.file ? <CloudUpload size={16} /> : <MessageSquare size={16} className="text-blue-400" />}
                 {<div className="flex items-center gap-2 truncate">
-                    {<GripHorizontal size={16} className='opacity-40'/>}
+                    {<GripHorizontal size={16} className='opacity-40' />}
                     <h3 className="text-sm font-semibold text-white truncate" title={bubble.title}>{bubble.type == "file" ? "File" : (isUser ? "You" : "Assistant")}</h3>
                 </div>}
 
