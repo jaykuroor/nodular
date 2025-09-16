@@ -11,6 +11,7 @@ interface DraggableBubbleProps {
   onToggleShrink: () => void;
   viewMode: ViewMode;
   onDrag: (e: any, data: { x: number, y: number }) => void;
+  onRemove: (bubbleId: string) => void;
 }
 
 export default function DraggableBubble({
@@ -18,7 +19,8 @@ export default function DraggableBubble({
   onAddNode,
   onToggleShrink,
   viewMode,
-  onDrag
+  onDrag,
+  onRemove
 }: DraggableBubbleProps) {
   const nodeRef = useRef(null);
 
@@ -35,6 +37,7 @@ export default function DraggableBubble({
           onAddNode={onAddNode}
           onToggleShrink={onToggleShrink}
           viewMode={viewMode}
+          onRemove={onRemove}
         />
       </div>
     </Draggable>

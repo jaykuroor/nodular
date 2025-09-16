@@ -26,7 +26,7 @@ export default function MessageNode({ message, onAddNode, viewMode }: MessageNod
     return (
         <>
             <div className={`group relative max-w-sm rounded-lg px-3 py-2 ${nodeBg} ${alignment} shadow-md`}>
-                <p className={`text-sm text-slate-50 ${viewMode === 'chart' && 'truncate'}`}>{message.text}</p>
+                <p className={`text-sm text-slate-50 ${viewMode === 'map' && 'truncate'}`}>{message.text}</p>
                 <div className="absolute -right-2 -top-2 flex opacity-0 transition-all group-hover:opacity-100">
                     <button
                         onClick={handleAddNodeClick}

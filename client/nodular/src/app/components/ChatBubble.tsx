@@ -7,10 +7,12 @@ interface ChatBubbleProps {
     onAddNode: (sourceMessageId: string) => void;
     onToggleShrink: () => void;
     viewMode: ViewMode;
+    onRemove: (bubbleId: string) => void;
 }
 
-export default function ChatBubble({ bubble, onAddNode, onToggleShrink, viewMode }: ChatBubbleProps) {
-    const isShrunk = bubble.isShrunk || (viewMode === 'chart' && bubble.messages.length > 0);
+export default function ChatBubble({ bubble, onAddNode, onToggleShrink, viewMode, onRemove }: ChatBubbleProps) {
+    const isShrunk = bubble.isShrunk || (viewMode === 'map' && bubble.messages.length > 0);
+    const hasContent = bubble.messages.length > 0 || bubble.file;
 
     const getFileIcon = (fileType: string) => {
         if (fileType.startsWith('image/')) return '🖼️';
@@ -33,22 +35,22 @@ export default function ChatBubble({ bubble, onAddNode, onToggleShrink, viewMode
                     <h3 className="text-sm font-semibold text-white truncate">{bubble.title}</h3>
                 </div>
                 <div className="flex items-center gap-1">
-                    <button title={isShrunk ? "Expand" : "Shrink"} onClick={onToggleShrink} className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white">
-                        {isShrunk ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
-                    </button>
-                    {bubble.file && (
-                         <button title="Close" className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white">
-                            <X size={16} />
-                         </button>
+                    {hasContent && (
+                        <button title={isShrunk ? "Expand" : "Shrink"} onClick={onToggleShrink} className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white">
+                            {isShrunk ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
+                        </button>
                     )}
+                    <button onClick={() => onRemove(bubble.id)} title="Remove" className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white">
+                        <X size={16} />
+                    </button>
                     <button title="More options" className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white">
                         <MoreHorizontal size={16} />
                     </button>
                 </div>
             </header>
 
-            {!isShrunk && (
-                <div className="flex h-96 flex-col gap-4 overflow-y-auto p-4">
+            {!isShrunk && hasContent && (
+                <div className={`flex flex-col gap-4 overflow-y-auto p-4 ${bubble.file && bubble.messages.length === 0 ? 'h-24' : 'h-96'}`}>
                     {bubble.messages.map(msg => (
                         <MessageNode key={msg.id} message={msg} onAddNode={onAddNode} viewMode={viewMode} />
                     ))}
@@ -60,9 +62,9 @@ export default function ChatBubble({ bubble, onAddNode, onToggleShrink, viewMode
                     )}
                 </div>
             )}
-            {isShrunk && (
+            {isShrunk && hasContent && (
                  <div className="p-4 text-sm text-slate-400">
-                    {bubble.messages.length > 0 ? bubble.messages[0].text.substring(0, 50) + '...' : '...'}
+                    {bubble.messages.length > 0 ? bubble.messages[0].text.substring(0, 50) + '...' : bubble.file?.name}
                  </div>
             )}
         </div>
