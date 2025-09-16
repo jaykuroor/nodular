@@ -15,6 +15,7 @@ export interface ChatBubbleType {
   isShrunk: boolean;
   type: 'message' | 'file'; // Added type property
   fileUrl?: string; // URL for the file if applicable
+  connectedTo?: string; // ADDED: ID of the bubble this file bubble is connected to
 }
 
 export type ViewMode = 'thread' | 'zoomed-out' | 'map';
@@ -26,7 +27,7 @@ export interface BoardState {
   viewMode: ViewMode;
 }
 
-export type LLMProvider = 
+export type LLMProvider =
   'gpt-oss-120b' |
   'gpt-oss-20b' |
   'qwen-3-32b' |

@@ -1,5 +1,6 @@
+// MODIFIED: Added Link2Off to the import
 import { ChatBubbleType, ViewMode } from '../types';
-import { MoreHorizontal, MessageSquare, Maximize2, Minimize2, GripHorizontal, X, CloudUpload, Grip } from 'lucide-react';
+import { MoreHorizontal, MessageSquare, Maximize2, Minimize2, GripHorizontal, X, CloudUpload, Link2Off } from 'lucide-react';
 import MessageNode from './MessageNode';
 import FileNode from './FileNode';
 import { useEffect, useState } from 'react';
@@ -11,9 +12,14 @@ interface ChatBubbleProps {
     viewMode: ViewMode;
     onRemove: (bubbleId: string) => void;
     isLastBubble: boolean;
+    isConnecting: boolean;
+    startConnecting: (bubbleId: string, e: React.MouseEvent) => void;
+    finishConnecting: (bubbleId: string) => void;
+    // ADDED: Prop for the removeConnection function
+    removeConnection: (bubbleId: string) => void;
 }
 
-export default function ChatBubble({ bubble, onAddNode, onToggleShrink, viewMode, onRemove, isLastBubble }: ChatBubbleProps) {
+export default function ChatBubble({ bubble, onAddNode, onToggleShrink, viewMode, onRemove, isLastBubble, isConnecting, startConnecting, finishConnecting, removeConnection }: ChatBubbleProps) {
     const isShrunk = bubble.isShrunk || (viewMode === 'map' && bubble.messages.length > 0);
     const isUser = bubble.messages[0]?.sender === 'user';
     const bgColor = bubble.type === 'file' ? 'bg-slate-800' : isUser ? 'bg-slate-600' : 'bg-blue-800';
@@ -30,14 +36,44 @@ export default function ChatBubble({ bubble, onAddNode, onToggleShrink, viewMode
     }, [bubble.file, bubble.type]);
 
 
+    const handleConnectionStart = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        startConnecting(bubble.id, e);
+    };
+
+    // ADDED: Handler for removing the connection
+    const handleConnectionRemove = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        removeConnection(bubble.id);
+    };
+
+    const handleConnectionEnd = (e: React.MouseEvent) => {
+        if (isConnecting && bubble.type === 'message') {
+            e.stopPropagation();
+            finishConnecting(bubble.id);
+        }
+    };
+
+
     return (
         <div
             id={bubble.id}
-            className={`glass-pane absolute flex flex-col rounded-xl shadow-2xl group ${bgColor} ${bubble.type === 'file' && !isShrunk ? 'max-w-210' : 'w-96'}`}
+            className={`glass-pane absolute flex flex-col rounded-xl shadow-2xl group z-10 ${bgColor} ${bubble.type === 'file' && !isShrunk ? 'max-w-210' : 'w-96'} ${isConnecting && bubble.type === 'message' ? 'connectable-node connectable-node-active' : ''}`}
+            onClick={handleConnectionEnd}
         >
-            {bubble.sourceMessageId && (
-                <div className="absolute -left-1 top-1/2 h-8 w-2 -translate-y-1/2 rounded-full bg-white"></div>
+            {/* MODIFIED: The connection handle now has conditional logic */}
+            {bubble.type === 'file' && (
+                <div
+                    // If connected, show the disconnect button. Otherwise, show the connect button.
+                    onClick={bubble.connectedTo ? handleConnectionRemove : handleConnectionStart}
+                    className={'absolute -left-1 top-1/2 h-8 w-2 -translate-y-1/2 opacity-20 rounded-full bg-white group-hover:opacity-100 transition-all hover:scale-105 hover:drop-shadow-glow hover:cursor-pointer'}
+                >
+                    {bubble.connectedTo && (
+                        <Link2Off size={16} className="text-slate-800" />
+                    )}
+                </div>
             )}
+
 
             <header className={`drag-handle cursor-pointer flex items-center justify-between rounded-t-xl border-slate-700/50 px-4 py-2 peer ${bubble.type == "file" ? 'bg-slate-850' : isUser ? 'bg-slate-850' : 'bg-blue-700'}`}>
                 {bubble.file ? <CloudUpload size ={16}/> : <MessageSquare size={16} className="text-blue-400" />}
@@ -45,7 +81,7 @@ export default function ChatBubble({ bubble, onAddNode, onToggleShrink, viewMode
                     {<GripHorizontal size={16} className='opacity-40'/>}
                     <h3 className="text-sm font-semibold text-white truncate" title={bubble.title}>{bubble.type == "file" ? "File" : (isUser ? "You" : "Assistant")}</h3>
                 </div>}
-                
+
                 <div className="flex items-center gap-1">
                     {bubble.type != "file" && <button title={isShrunk ? "Expand" : "Shrink"} onClick={onToggleShrink} className="rounded p-1 text-slate-100 hover:bg-slate-700 hover:text-white">
                         {isShrunk ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
@@ -72,7 +108,6 @@ export default function ChatBubble({ bubble, onAddNode, onToggleShrink, viewMode
                     ))}
                     {bubble.type === 'file' && bubble.file && (
                         <>
-                            <div className={`absolute -left-1 top-1/2 h-8 w-2 -translate-y-1/2 opacity-20 rounded-full bg-white group-hover:opacity-100 transition-all hover:scale-105 hover:drop-shadow-glow hover:cursor-pointer`}></div>
                             <FileNode
                                 fileName={bubble.file.name}
                                 isShrunk={isShrunk}
