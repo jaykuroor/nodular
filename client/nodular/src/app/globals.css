@@ -1,7 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&family=Play:wght@400;700&display=swap');
 @import "tailwindcss";
 
+
 /* v4: write normal CSS; no @layer needed */
-body { background-color: #0f172a; color: #e2e8f0; } /* slate-900 / slate-200 */
+body { 
+  background-color: #0f172a; 
+  color: #e2e8f0; 
+  font-family: 'Lexend', sans-serif; /* Default font for the body */
+} /* slate-900 / slate-200 */
+
 
 .glass-pane {
   background-color: rgba(30, 41, 59, 0.5); /* slate-800/50 */
