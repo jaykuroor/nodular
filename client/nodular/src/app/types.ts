@@ -9,7 +9,7 @@ export interface ChatBubbleType {
   id: string;
   title: string;
   messages: Message[];
-  sourceMessageId?: string;
+  parentId?: string; // Renamed from sourceMessageId and made optional
   position: { x: number; y: number };
   file?: File;
   isShrunk: boolean;

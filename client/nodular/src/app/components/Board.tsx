@@ -27,7 +27,7 @@ const initialBoard: BoardState = {
     {
       id: 'bubble-2',
       title: 'Zustand Deep Dive',
-      sourceMessageId: 'msg-1-1',
+      parentId: 'msg-1-1',
       position: { x: 520, y: 80 },
       messages: [
         { id: 'msg-2-1', text: 'Tell me more about Zustand. Why is it gaining popularity?', sender: 'llm', timestamp: '4:03 PM' },
@@ -83,38 +83,94 @@ export default function AppContainer() {
       }
     };
     const handleMouseMove = (e: MouseEvent) => {
-        if (isConnecting && boardRef.current) {
-            const rect = boardRef.current.getBoundingClientRect();
-            setArrowEndPos({
-                x: (e.clientX - rect.left - transform.x) / transform.k,
-                y: (e.clientY - rect.top - transform.y) / transform.k,
-            });
-        }
+      if (isConnecting && boardRef.current) {
+        const rect = boardRef.current.getBoundingClientRect();
+        setArrowEndPos({
+          x: (e.clientX - rect.left - transform.x) / transform.k,
+          y: (e.clientY - rect.top - transform.y) / transform.k,
+        });
+      }
     };
 
 
     board.addEventListener('wheel', handleWheel, { passive: false });
     if (isConnecting) {
-        window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mousemove', handleMouseMove);
     }
 
     return () => {
-        board.removeEventListener('wheel', handleWheel);
-        window.removeEventListener('mousemove', handleMouseMove);
+      board.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('mousemove', handleMouseMove);
     };
   }, [isConnecting, transform]);
 
   const handleDrag = (bubbleId: string, data: { x: number, y: number }) => {
-    setBoardState(prev => ({
-      ...prev,
-      bubbles: prev.bubbles.map(b =>
-        b.id === bubbleId ? { ...b, position: { x: data.x, y: data.y } } : b
-      )
-    }));
+    const { x, y } = data;
+    const movingBubble = boardState.bubbles.find(b => b.id === bubbleId);
+    if (!movingBubble) return;
+
+    const BUBBLE_WIDTH = 384; // w-96
+    const BUBBLE_HEIGHT = 150; // estimated height
+
+    let collision = false;
+    for (const bubble of boardState.bubbles) {
+      if (bubble.id === bubbleId) continue;
+
+      if (
+        x < bubble.position.x + BUBBLE_WIDTH &&
+        x + BUBBLE_WIDTH > bubble.position.x &&
+        y < bubble.position.y + BUBBLE_HEIGHT &&
+        y + BUBBLE_HEIGHT > bubble.position.y
+      ) {
+        collision = true;
+        break;
+      }
+    }
+
+    if (!collision) {
+      setBoardState(prev => ({
+        ...prev,
+        bubbles: prev.bubbles.map(b =>
+          b.id === bubbleId ? { ...b, position: { x, y } } : b
+        )
+      }));
+    }
   };
 
   const handleSendMessage = (text: string, bubbleId: string) => {
-    // ... (rest of the function is the same)
+    const newBubbleId = `bubble-${Date.now()}`;
+    let parentId = bubbleId;
+    if (!parentId && boardState.bubbles.length > 0) {
+      parentId = boardState.bubbles[boardState.bubbles.length - 1].id;
+    }
+
+    const parentBubble = boardState.bubbles.find(b => b.id === parentId);
+    const newPosition = parentBubble
+      ? { x: parentBubble.position.x + 400, y: parentBubble.position.y }
+      : { x: 50, y: 50 };
+
+
+    const newMessage: Message = {
+      id: `msg-${Date.now()}`,
+      text,
+      sender: 'user',
+      timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric' }),
+    };
+
+    const newBubble: ChatBubbleType = {
+      id: newBubbleId,
+      title: 'New Message',
+      messages: [newMessage],
+      position: newPosition,
+      isShrunk: false,
+      type: 'message',
+      parentId: parentId,
+    };
+
+    setBoardState(prev => ({
+      ...prev,
+      bubbles: [...prev.bubbles, newBubble],
+    }));
   };
 
   const handleAddNode = (sourceMessageId: string) => {
@@ -151,8 +207,8 @@ export default function AppContainer() {
     }));
 
     setBoardState(prev => ({
-        ...prev,
-        bubbles: [...prev.bubbles, ...newBubbles]
+      ...prev,
+      bubbles: [...prev.bubbles, ...newBubbles]
     }));
   };
 
@@ -162,10 +218,10 @@ export default function AppContainer() {
 
   const toggleShrink = (bubbleId: string) => {
     setBoardState(prev => ({
-        ...prev,
-        bubbles: prev.bubbles.map(b =>
-            b.id === bubbleId ? { ...b, isShrunk: !b.isShrunk } : b
-        )
+      ...prev,
+      bubbles: prev.bubbles.map(b =>
+        b.id === bubbleId ? { ...b, isShrunk: !b.isShrunk } : b
+      )
     }));
   };
 
@@ -186,37 +242,37 @@ export default function AppContainer() {
     setArrowStart(startBubbleId);
 
     if (boardRef.current) {
-        const rect = boardRef.current.getBoundingClientRect();
-        setArrowEndPos({
-            x: (e.clientX - rect.left - transform.x) / transform.k,
-            y: (e.clientY - rect.top - transform.y) / transform.k,
-        });
+      const rect = boardRef.current.getBoundingClientRect();
+      setArrowEndPos({
+        x: (e.clientX - rect.left - transform.x) / transform.k,
+        y: (e.clientY - rect.top - transform.y) / transform.k,
+      });
     }
   };
 
 
   const finishConnecting = (endBubbleId: string) => {
-      if (arrowStart) {
-          setBoardState(prev => ({
-              ...prev,
-              bubbles: prev.bubbles.map(b =>
-                  b.id === arrowStart ? { ...b, connectedTo: endBubbleId } : b
-              )
-          }));
-      }
-      setIsConnecting(false);
-      setArrowStart(null);
-      setArrowEndPos(null);
+    if (arrowStart) {
+      setBoardState(prev => ({
+        ...prev,
+        bubbles: prev.bubbles.map(b =>
+          b.id === arrowStart ? { ...b, connectedTo: endBubbleId } : b
+        )
+      }));
+    }
+    setIsConnecting(false);
+    setArrowStart(null);
+    setArrowEndPos(null);
   };
 
   // ADDED: Function to remove a connection from a file bubble
   const removeConnection = (bubbleId: string) => {
-      setBoardState(prev => ({
-          ...prev,
-          bubbles: prev.bubbles.map(b =>
-              b.id === bubbleId ? { ...b, connectedTo: undefined } : b
-          )
-      }));
+    setBoardState(prev => ({
+      ...prev,
+      bubbles: prev.bubbles.map(b =>
+        b.id === bubbleId ? { ...b, connectedTo: undefined } : b
+      )
+    }));
   };
 
 
@@ -241,11 +297,11 @@ export default function AppContainer() {
           onDrop={handleFileDrop}
           onDragOver={handleDragOver}
           onClick={() => {
-              if (isConnecting) {
-                  setIsConnecting(false);
-                  setArrowStart(null);
-                  setArrowEndPos(null);
-              }
+            if (isConnecting) {
+              setIsConnecting(false);
+              setArrowStart(null);
+              setArrowEndPos(null);
+            }
           }}
         >
           {showGuide && <Guide onClose={() => setShowGuide(false)} />}
@@ -271,33 +327,33 @@ export default function AppContainer() {
 
               {/* MODIFIED: The follower div is now slightly larger and offset to be centered on the cursor */}
               {isConnecting && arrowEndPos && (
-                  <div
-                      id="arrow-follower"
-                      style={{
-                          position: 'absolute',
-                          left: arrowEndPos.x, // Offset by half width
-                          top: arrowEndPos.y,  // Offset by half height
-                      }}
-                  />
+                <div
+                  id="arrow-follower"
+                  style={{
+                    position: 'absolute',
+                    left: arrowEndPos.x, // Offset by half width
+                    top: arrowEndPos.y,  // Offset by half height
+                  }}
+                />
               )}
 
               {boardState.bubbles.map(bubble => {
                 if (bubble.type === 'file' && bubble.connectedTo) {
-                    return (
-                        <Xarrow
-                            key={`${bubble.id}-${bubble.connectedTo}`}
-                            start={bubble.id}
-                            end={bubble.connectedTo}
-                            color="white"
-                            showHead={false}
-                            strokeWidth={2}
-                            path="smooth"
-                            zIndex={0}
-                        />
-                    );
+                  return (
+                    <Xarrow
+                      key={`${bubble.id}-${bubble.connectedTo}`}
+                      start={bubble.id}
+                      end={bubble.connectedTo}
+                      color="white"
+                      showHead={false}
+                      strokeWidth={2}
+                      path="smooth"
+                      zIndex={0}
+                    />
+                  );
                 }
-                if (bubble.sourceMessageId) {
-                  const sourceBubble = boardState.bubbles.find(b => b.messages.some(m => m.id === bubble.sourceMessageId));
+                if (bubble.parentId) {
+                  const sourceBubble = boardState.bubbles.find(b => b.messages.some(m => m.id === bubble.parentId));
                   if (sourceBubble) {
                     return (
                       <Xarrow
@@ -309,22 +365,58 @@ export default function AppContainer() {
                         strokeWidth={2}
                         path="smooth"
                         zIndex={0}
+                        startAnchor="bottom"
                       />
                     );
                   }
                 }
                 return null;
               })}
-              {isConnecting && arrowStart && (
-                  <Xarrow
-                      start={arrowStart}
-                      end={"arrow-follower"}
-                      color="lightblue"
+
+              {boardState.bubbles.map(bubble => {
+                if (bubble.parentId) {
+                  const sourceBubble = boardState.bubbles.find(b => b.id === bubble.parentId);
+                  if (sourceBubble) {
+                    return (
+                      <Xarrow
+                        key={`${sourceBubble.id}-${bubble.id}`}
+                        start={sourceBubble.id}
+                        end={bubble.id}
+                        color="white"
+                        showHead={true}
+                        strokeWidth={2}
+                        path="smooth"
+                        zIndex={0}                        
+                      />
+                    );
+                  }
+                }
+                if (bubble.type === 'file' && bubble.connectedTo) {
+                  return (
+                    <Xarrow
+                      key={`${bubble.id}-${bubble.connectedTo}`}
+                      start={bubble.id}
+                      end={bubble.connectedTo}
+                      color="white"
                       showHead={false}
                       strokeWidth={2}
                       path="smooth"
-                      zIndex={5}
-                  />
+                      zIndex={0}
+                    />
+                  );
+                }
+                return null;
+              })}
+              {isConnecting && arrowStart && (
+                <Xarrow
+                  start={arrowStart}
+                  end={"arrow-follower"}
+                  color="lightblue"
+                  showHead={false}
+                  strokeWidth={2}
+                  path="smooth"
+                  zIndex={5}
+                />
               )}
             </Xwrapper>
           </div>
