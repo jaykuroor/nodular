@@ -14,19 +14,7 @@ body { background-color: #0f172a; color: #e2e8f0; } /* slate-900 / slate-200 */
 .main-chat-view {
   position: relative;
   overflow: hidden;
-}
-.main-chat-view::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  width: 200%; height: 200%;
-  background-image: radial-gradient(circle, white 1px, rgba(0,0,0,0) 1px);
+  background-color: #0f172a;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
   background-size: 20px 20px;
-  animation: pan-background 20s linear infinite;
-  z-index: -1;
-  pointer-events: none;
-}
-@keyframes pan-background {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(-50%, -50%); }
 }
