@@ -1,6 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&family=Play:wght@400;700&display=swap');
 @import "tailwindcss";
 
+@layer utilities {
+  .drop-shadow-glow {
+    box-shadow: 
+      0 0px 20px rgba(255, 255, 255, 0.95)
+  }
+}
+
+
 
 /* v4: write normal CSS; no @layer needed */
 body { 

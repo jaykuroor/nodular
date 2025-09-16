@@ -72,7 +72,7 @@ export default function ChatBubble({ bubble, onAddNode, onToggleShrink, viewMode
                     ))}
                     {bubble.type === 'file' && bubble.file && (
                         <>
-                            <div className={`absolute -left-1 top-1/2 h-8 w-2 -translate-y-1/2 opacity-20 rounded-full bg-white group-hover:opacity-100`}></div>
+                            <div className={`absolute -left-1 top-1/2 h-8 w-2 -translate-y-1/2 opacity-20 rounded-full bg-white group-hover:opacity-100 transition-all hover:scale-105 hover:drop-shadow-glow hover:cursor-pointer`}></div>
                             <FileNode
                                 fileName={bubble.file.name}
                                 isShrunk={isShrunk}
