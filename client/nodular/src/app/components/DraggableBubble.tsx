@@ -12,6 +12,7 @@ interface DraggableBubbleProps {
   viewMode: ViewMode;
   onDrag: (e: any, data: { x: number, y: number }) => void;
   onRemove: (bubbleId: string) => void;
+  isLastBubble: boolean;
 }
 
 export default function DraggableBubble({
@@ -20,7 +21,8 @@ export default function DraggableBubble({
   onToggleShrink,
   viewMode,
   onDrag,
-  onRemove
+  onRemove,
+  isLastBubble,
 }: DraggableBubbleProps) {
   const nodeRef = useRef(null);
 
@@ -30,6 +32,7 @@ export default function DraggableBubble({
       position={bubble.position}
       nodeRef={nodeRef}
       onDrag={onDrag}
+      handle=".drag-handle"
     >
       <div ref={nodeRef} style={{ position: 'absolute' }}>
         <ChatBubble
@@ -38,6 +41,7 @@ export default function DraggableBubble({
           onToggleShrink={onToggleShrink}
           viewMode={viewMode}
           onRemove={onRemove}
+          isLastBubble={isLastBubble}
         />
       </div>
     </Draggable>

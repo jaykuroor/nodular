@@ -13,6 +13,7 @@ export interface ChatBubbleType {
   position: { x: number; y: number };
   file?: File;
   isShrunk: boolean;
+  type: 'message' | 'file'; // Added type property
 }
 
 export type ViewMode = 'thread' | 'zoomed-out' | 'map';
