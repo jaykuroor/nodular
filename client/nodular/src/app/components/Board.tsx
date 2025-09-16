@@ -383,7 +383,7 @@ export default function AppContainer() {
                         start={sourceBubble.id}
                         end={bubble.id}
                         color="white"
-                        showHead={true}
+                        showHead={false}
                         strokeWidth={2}
                         path="smooth"
                         zIndex={0}                        
