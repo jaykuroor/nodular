@@ -52,6 +52,11 @@ export default function AppContainer() {
   const boardRef = useRef<HTMLDivElement>(null);
   const [transform, setTransform] = useState({ x: 0, y: 0, k: 1 });
 
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [arrowStart, setArrowStart] = useState<string | null>(null);
+  const [arrowEndPos, setArrowEndPos] = useState<{ x: number, y: number } | null>(null);
+
+
   useEffect(() => {
     const board = boardRef.current;
     if (!board) return;
@@ -77,10 +82,27 @@ export default function AppContainer() {
         setTransform(prev => ({ ...prev, x: prev.x - e.deltaX, y: prev.y - e.deltaY }));
       }
     };
+    const handleMouseMove = (e: MouseEvent) => {
+        if (isConnecting && boardRef.current) {
+            const rect = boardRef.current.getBoundingClientRect();
+            setArrowEndPos({
+                x: (e.clientX - rect.left - transform.x) / transform.k,
+                y: (e.clientY - rect.top - transform.y) / transform.k,
+            });
+        }
+    };
+
 
     board.addEventListener('wheel', handleWheel, { passive: false });
-    return () => board.removeEventListener('wheel', handleWheel);
-  }, [transform]);
+    if (isConnecting) {
+        window.addEventListener('mousemove', handleMouseMove);
+    }
+
+    return () => {
+        board.removeEventListener('wheel', handleWheel);
+        window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [isConnecting, transform]);
 
   const handleDrag = (bubbleId: string, data: { x: number, y: number }) => {
     setBoardState(prev => ({
@@ -90,7 +112,7 @@ export default function AppContainer() {
       )
     }));
   };
-  
+
   const handleSendMessage = (text: string, bubbleId: string) => {
     // ... (rest of the function is the same)
   };
@@ -121,7 +143,7 @@ export default function AppContainer() {
       id: `file-${Date.now()}-${i}`,
       title: file.name,
       messages: [],
-      position: { x: e.clientX - transform.x, y: e.clientY - transform.y }, // Adjust for transform
+      position: { x: (e.clientX - transform.x) / transform.k, y: (e.clientY - transform.y) / transform.k }, // Adjust for transform
       file,
       isShrunk: true,
       type: 'file',
@@ -158,6 +180,46 @@ export default function AppContainer() {
     }));
   };
 
+  const startConnecting = (startBubbleId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsConnecting(true);
+    setArrowStart(startBubbleId);
+
+    if (boardRef.current) {
+        const rect = boardRef.current.getBoundingClientRect();
+        setArrowEndPos({
+            x: (e.clientX - rect.left - transform.x) / transform.k,
+            y: (e.clientY - rect.top - transform.y) / transform.k,
+        });
+    }
+  };
+
+
+  const finishConnecting = (endBubbleId: string) => {
+      if (arrowStart) {
+          setBoardState(prev => ({
+              ...prev,
+              bubbles: prev.bubbles.map(b =>
+                  b.id === arrowStart ? { ...b, connectedTo: endBubbleId } : b
+              )
+          }));
+      }
+      setIsConnecting(false);
+      setArrowStart(null);
+      setArrowEndPos(null);
+  };
+
+  // ADDED: Function to remove a connection from a file bubble
+  const removeConnection = (bubbleId: string) => {
+      setBoardState(prev => ({
+          ...prev,
+          bubbles: prev.bubbles.map(b =>
+              b.id === bubbleId ? { ...b, connectedTo: undefined } : b
+          )
+      }));
+  };
+
+
   return (
     <div className="flex h-screen w-full bg-slate-900">
       <Sidebar
@@ -178,6 +240,13 @@ export default function AppContainer() {
           className="relative flex-1 overflow-auto p-8 main-chat-view"
           onDrop={handleFileDrop}
           onDragOver={handleDragOver}
+          onClick={() => {
+              if (isConnecting) {
+                  setIsConnecting(false);
+                  setArrowStart(null);
+                  setArrowEndPos(null);
+              }
+          }}
         >
           {showGuide && <Guide onClose={() => setShowGuide(false)} />}
           <div style={{ transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.k})`, transformOrigin: '0 0' }}>
@@ -192,9 +261,41 @@ export default function AppContainer() {
                   onDrag={(e, data) => handleDrag(bubble.id, data)}
                   onRemove={removeBubble}
                   isLastBubble={index === boardState.bubbles.length - 1}
+                  isConnecting={isConnecting}
+                  startConnecting={startConnecting}
+                  finishConnecting={finishConnecting}
+                  // ADDED: Pass the removeConnection function
+                  removeConnection={removeConnection}
                 />
               ))}
+
+              {/* MODIFIED: The follower div is now slightly larger and offset to be centered on the cursor */}
+              {isConnecting && arrowEndPos && (
+                  <div
+                      id="arrow-follower"
+                      style={{
+                          position: 'absolute',
+                          left: arrowEndPos.x, // Offset by half width
+                          top: arrowEndPos.y,  // Offset by half height
+                      }}
+                  />
+              )}
+
               {boardState.bubbles.map(bubble => {
+                if (bubble.type === 'file' && bubble.connectedTo) {
+                    return (
+                        <Xarrow
+                            key={`${bubble.id}-${bubble.connectedTo}`}
+                            start={bubble.id}
+                            end={bubble.connectedTo}
+                            color="white"
+                            showHead={false}
+                            strokeWidth={2}
+                            path="smooth"
+                            zIndex={0}
+                        />
+                    );
+                }
                 if (bubble.sourceMessageId) {
                   const sourceBubble = boardState.bubbles.find(b => b.messages.some(m => m.id === bubble.sourceMessageId));
                   if (sourceBubble) {
@@ -214,6 +315,17 @@ export default function AppContainer() {
                 }
                 return null;
               })}
+              {isConnecting && arrowStart && (
+                  <Xarrow
+                      start={arrowStart}
+                      end={"arrow-follower"}
+                      color="lightblue"
+                      showHead={false}
+                      strokeWidth={2}
+                      path="smooth"
+                      zIndex={5}
+                  />
+              )}
             </Xwrapper>
           </div>
         </main>

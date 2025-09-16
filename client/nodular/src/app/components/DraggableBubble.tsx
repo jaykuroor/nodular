@@ -13,6 +13,11 @@ interface DraggableBubbleProps {
   onDrag: (e: any, data: { x: number, y: number }) => void;
   onRemove: (bubbleId: string) => void;
   isLastBubble: boolean;
+  isConnecting: boolean;
+  startConnecting: (bubbleId: string, e: React.MouseEvent) => void;
+  finishConnecting: (bubbleId: string) => void;
+  // ADDED: Prop for the removeConnection function
+  removeConnection: (bubbleId: string) => void;
 }
 
 export default function DraggableBubble({
@@ -23,6 +28,11 @@ export default function DraggableBubble({
   onDrag,
   onRemove,
   isLastBubble,
+  isConnecting,
+  startConnecting,
+  finishConnecting,
+  // ADDED: Destructure new prop
+  removeConnection,
 }: DraggableBubbleProps) {
   const nodeRef = useRef(null);
 
@@ -42,6 +52,11 @@ export default function DraggableBubble({
           viewMode={viewMode}
           onRemove={onRemove}
           isLastBubble={isLastBubble}
+          isConnecting={isConnecting}
+          startConnecting={startConnecting}
+          finishConnecting={finishConnecting}
+          // ADDED: Pass removeConnection to ChatBubble
+          removeConnection={removeConnection}
         />
       </div>
     </Draggable>
