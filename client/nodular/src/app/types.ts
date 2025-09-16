@@ -15,7 +15,7 @@ export interface ChatBubbleType {
   isShrunk: boolean;
 }
 
-export type ViewMode = 'thread' | 'zoomed-out' | 'chart';
+export type ViewMode = 'thread' | 'zoomed-out' | 'map';
 
 export interface BoardState {
   id: string;
@@ -24,4 +24,12 @@ export interface BoardState {
   viewMode: ViewMode;
 }
 
-export type LLMProvider = 'openai' | 'llama' | 'deepseek' | 'gemini';
+export type LLMProvider = 
+  'gpt-oss-120b' |
+  'gpt-oss-20b' |
+  'qwen-3-32b' |
+  'llama-4-scout' |
+  'kimi-k2' |
+  'llama-3.3-70b' |
+  'llama-4-maverick' |
+  'whisper-large-v3';
