@@ -14,6 +14,7 @@ export interface ChatBubbleType {
   file?: File;
   isShrunk: boolean;
   type: 'message' | 'file'; // Added type property
+  fileUrl?: string; // URL for the file if applicable
 }
 
 export type ViewMode = 'thread' | 'zoomed-out' | 'map';
