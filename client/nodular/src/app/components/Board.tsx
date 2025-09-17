@@ -94,23 +94,91 @@ function FlowBoard() {
     
     // Files can only connect to human (prompt) nodes
     if (sourceNode.data.bubble.type === 'file') {
-      return targetNode.data.bubble.type === 'message' && targetNode.data.bubble.messages[0]?.sender === 'human';
+      return targetNode.data.bubble.type === 'message' && 
+             targetNode.data.bubble.messages[0]?.sender === 'human';
     }
     
-    return true;
+    // Human nodes can connect to AI nodes
+    if (sourceNode.data.bubble.type === 'message' && 
+        sourceNode.data.bubble.messages[0]?.sender === 'human') {
+      return targetNode.data.bubble.type === 'message' && 
+             targetNode.data.bubble.messages[0]?.sender === 'ai';
+    }
+    
+    // AI nodes can connect to human nodes
+    if (sourceNode.data.bubble.type === 'message' && 
+        sourceNode.data.bubble.messages[0]?.sender === 'ai') {
+      return targetNode.data.bubble.type === 'message' && 
+             targetNode.data.bubble.messages[0]?.sender === 'human';
+    }
+    
+    return false;
   };
 
   const onConnect: OnConnect = useCallback(
     (connection) => {
         if (isValidConnection(connection)) {
-            setEdges((eds) => addEdge({ ...connection, type: 'smoothstep' }, eds));
+            const sourceNode = nodes.find(node => node.id === connection.source);
+            const targetNode = nodes.find(node => node.id === connection.target);
+            
+            let edgeStyle = {};
+            let edgeType = 'smoothstep';
+            
+            // Style edges based on connection type
+            if (sourceNode?.data.bubble.type === 'file') {
+                edgeStyle = { stroke: '#f59e0b', strokeWidth: 2 }; // Orange for file connections
+            } else if (sourceNode?.data.bubble.messages[0]?.sender === 'human') {
+                edgeStyle = { stroke: '#3b82f6', strokeWidth: 2 }; // Blue for prompt->response
+            } else if (sourceNode?.data.bubble.messages[0]?.sender === 'ai') {
+                edgeStyle = { stroke: '#10b981', strokeWidth: 2 }; // Green for response->prompt
+            }
+            
+            setEdges((eds) => addEdge({ 
+                ...connection, 
+                type: edgeType,
+                style: edgeStyle,
+                animated: sourceNode?.data.bubble.type === 'file'
+            }, eds));
+            
+            // Update bubble state to track connections
+            setBoardState(prev => ({
+                ...prev,
+                bubbles: prev.bubbles.map(bubble => {
+                    if (bubble.id === connection.target && sourceNode?.data.bubble.type === 'file') {
+                        return {
+                            ...bubble,
+                            connectedFiles: [...(bubble.connectedFiles || []), connection.source!]
+                        };
+                    }
+                    if (bubble.id === connection.source && sourceNode?.data.bubble.type === 'file') {
+                        return {
+                            ...bubble,
+                            connectedTo: connection.target!
+                        };
+                    }
+                    if (bubble.id === connection.target && sourceNode?.data.bubble.messages[0]?.sender === 'human') {
+                        return {
+                            ...bubble,
+                            parentId: connection.source!
+                        };
+                    }
+                    if (bubble.id === connection.target && sourceNode?.data.bubble.messages[0]?.sender === 'ai') {
+                        return {
+                            ...bubble,
+                            parentId: connection.source!
+                        };
+                    }
+                    return bubble;
+                })
+            }));
         }
     },
-    [setEdges, nodes]
+    [setEdges, nodes, setBoardState]
   );
   
   const onEdgeClick = (_: React.MouseEvent, edge: Edge) => {
     const sourceNode = nodes.find(node => node.id === edge.source);
+    // Only show disconnect modal for file connections
     if (sourceNode?.data.bubble.type === 'file') {
       setEdgeToDisconnect(edge);
       setDisconnectModalOpen(true);
@@ -120,6 +188,27 @@ function FlowBoard() {
   const confirmDisconnect = () => {
     if (edgeToDisconnect) {
       setEdges((eds) => eds.filter((e) => e.id !== edgeToDisconnect.id));
+      
+      // Update bubble state to remove connections
+      setBoardState(prev => ({
+        ...prev,
+        bubbles: prev.bubbles.map(bubble => {
+          if (bubble.id === edgeToDisconnect.target) {
+            return {
+              ...bubble,
+              connectedFiles: (bubble.connectedFiles || []).filter(id => id !== edgeToDisconnect.source)
+            };
+          }
+          if (bubble.id === edgeToDisconnect.source) {
+            return {
+              ...bubble,
+              connectedTo: undefined
+            };
+          }
+          return bubble;
+        })
+      }));
+      
       setEdgeToDisconnect(null);
     }
     setDisconnectModalOpen(false);
@@ -128,7 +217,13 @@ function FlowBoard() {
   const removeNode = useCallback((nodeId: string) => {
     setNodes((nds) => nds.filter((node) => node.id !== nodeId));
     setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
-  }, [setNodes, setEdges]);
+    
+    // Update bubble state
+    setBoardState(prev => ({
+      ...prev,
+      bubbles: prev.bubbles.filter(bubble => bubble.id !== nodeId)
+    }));
+  }, [setNodes, setEdges, setBoardState]);
   
   const toggleShrink = useCallback((nodeId: string) => {
     setNodes((nds) =>
@@ -140,7 +235,17 @@ function FlowBoard() {
         return node;
       })
     );
-  }, [setNodes]);
+    
+    setBoardState(prev => ({
+      ...prev,
+      bubbles: prev.bubbles.map(bubble => {
+        if (bubble.id === nodeId) {
+          return { ...bubble, isShrunk: !bubble.isShrunk };
+        }
+        return bubble;
+      })
+    }));
+  }, [setNodes, setBoardState]);
 
   useEffect(() => {
     const bubbles = boardState.bubbles;
@@ -150,16 +255,43 @@ function FlowBoard() {
       position: bubble.position,
       data: { bubble, onRemove: removeNode, onToggleShrink: toggleShrink },
     }));
-    const initialEdges = bubbles
-      .filter((bubble) => bubble.parentId)
-      .map((bubble) => ({
-        id: `e-${bubble.parentId}-${bubble.id}`,
-        source: bubble.parentId!,
-        target: bubble.id,
+    
+    // Create edges for message chains (prompt->response->prompt)
+    const messageChainEdges = bubbles
+      .filter((bubble) => bubble.parentId && bubble.type === 'message')
+      .map((bubble) => {
+        const parentBubble = bubbles.find(b => b.id === bubble.parentId);
+        let edgeStyle = {};
+        
+        if (parentBubble?.messages[0]?.sender === 'human') {
+          edgeStyle = { stroke: '#3b82f6', strokeWidth: 2 }; // Blue for prompt->response
+        } else if (parentBubble?.messages[0]?.sender === 'ai') {
+          edgeStyle = { stroke: '#10b981', strokeWidth: 2 }; // Green for response->prompt
+        }
+        
+        return {
+          id: `e-${bubble.parentId}-${bubble.id}`,
+          source: bubble.parentId!,
+          target: bubble.id,
+          type: 'smoothstep',
+          style: edgeStyle,
+        };
+      });
+    
+    // Create edges for file connections
+    const fileEdges = bubbles
+      .filter(bubble => bubble.connectedTo)
+      .map(bubble => ({
+        id: `e-${bubble.id}-${bubble.connectedTo}`,
+        source: bubble.id,
+        target: bubble.connectedTo!,
         type: 'smoothstep',
+        style: { stroke: '#f59e0b', strokeWidth: 2 },
+        animated: true,
       }));
+    
     setNodes(initialNodes);
-    setEdges(initialEdges);
+    setEdges([...messageChainEdges, ...fileEdges]);
   }, [boardState.bubbles, removeNode, toggleShrink]);
 
   const handleSendMessage = (text: string, bubbleId: string) => {
@@ -183,23 +315,10 @@ function FlowBoard() {
       parentId: parentNode?.id,
     };
     
-    const newNode: Node = {
-      id: newBubble.id,
-      type: 'chatBubble',
-      position: newBubble.position,
-      data: { bubble: newBubble, onRemove: removeNode, onToggleShrink: toggleShrink },
-    };
-
-    setNodes((nds) => nds.concat(newNode));
-    if (parentNode) {
-      const newEdge: Edge = {
-        id: `e-${parentNode.id}-${newNode.id}`,
-        source: parentNode.id,
-        target: newNode.id,
-        type: 'smoothstep',
-      };
-      setEdges((eds) => eds.concat(newEdge));
-    }
+    setBoardState(prev => ({
+      ...prev,
+      bubbles: [...prev.bubbles, newBubble]
+    }));
   };
   
   const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -213,28 +332,24 @@ function FlowBoard() {
       y: e.clientY - reactFlowBounds.top,
     });
 
-    const newNodes: Node[] = files.map((file, i) => {
-      const bubble: ChatBubbleType = {
-        id: `file-${Date.now()}-${i}`,
-        title: file.name,
-        messages: [],
-        position: {
-          x: position.x + i * 20,
-          y: position.y + i * 20,
-        },
-        file,
-        isShrunk: true,
-        type: 'file',
-        fileUrl: URL.createObjectURL(file),
-      };
-      return {
-        id: bubble.id,
-        type: 'chatBubble',
-        position: bubble.position,
-        data: { bubble, onRemove: removeNode, onToggleShrink: toggleShrink },
-      };
-    });
-    setNodes((nds) => [...nds, ...newNodes]);
+    const newBubbles: ChatBubbleType[] = files.map((file, i) => ({
+      id: `file-${Date.now()}-${i}`,
+      title: file.name,
+      messages: [],
+      position: {
+        x: position.x + i * 20,
+        y: position.y + i * 20,
+      },
+      file,
+      isShrunk: true,
+      type: 'file',
+      fileUrl: URL.createObjectURL(file),
+    }));
+    
+    setBoardState(prev => ({
+      ...prev,
+      bubbles: [...prev.bubbles, ...newBubbles]
+    }));
   };
   
   const setViewMode = (mode: ViewMode) => {
