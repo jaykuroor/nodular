@@ -1,5 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&family=Play:wght@400;700&display=swap');
 @import "tailwindcss";
+@import 'reactflow/dist/style.css';
+
 
 @layer utilities {
   .drop-shadow-glow {
@@ -48,4 +50,20 @@ body {
 /* ADDED: Style for connectable nodes when arrow is active */
 .connectable-node-active {
     outline-color: rgba(59, 130, 246, 0.5); /* Semi-transparent blue */
+}
+
+/* Custom React Flow Controls */
+.react-flow__controls {
+  box-shadow: none;
+}
+.react-flow__controls button {
+  background-color: #1e293b; /* slate-800 */
+  border: 1px solid #334155; /* slate-700 */
+  border-bottom: none;
+}
+.react-flow__controls button:hover {
+  background-color: #334155; /* slate-700 */
+}
+.react-flow__controls button svg {
+  fill: #94a3b8; /* slate-400 */
 }
