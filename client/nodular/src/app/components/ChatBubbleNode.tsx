@@ -21,6 +21,7 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
     const nodeId = useNodeId()!;
     
     const isHuman = bubble.messages[0]?.sender === 'human';
+    const isAI = bubble.messages[0]?.sender === 'ai';
     const bgColor = bubble.type === 'file' ? 'bg-slate-800' : isHuman ? 'bg-slate-600' : 'bg-blue-800';
 
     const handleRemove = useCallback(() => {
@@ -33,8 +34,84 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
 
     return (
         <div className={`glass-pane flex flex-col shadow-2xl group z-20 rounded-xl ${bgColor} ${bubble.type === 'file' && !bubble.isShrunk ? 'max-w-210' : 'w-96'}`}>
-            {bubble.type === 'message' && (
-                <Handle type="target" position={Position.Top} isConnectable={isConnectable} style={{ background: 'transparent', border: 'none' }}/>
+            {/* Top handle for AI responses and human prompts */}
+            {(isAI || isHuman) && (
+                <Handle 
+                    type="target" 
+                    position={Position.Top} 
+                    isConnectable={isConnectable} 
+                    style={{ 
+                        background: '#64748b', 
+                        border: '2px solid #ffffff',
+                        width: '12px',
+                        height: '12px',
+                        top: '-6px'
+                    }}
+                />
+            )}
+            
+            {/* Left handle for file connections to prompts */}
+            {bubble.type === 'file' && (
+                <Handle 
+                    type="source" 
+                    position={Position.Left} 
+                    isConnectable={isConnectable}
+                    style={{ 
+                        background: '#f59e0b', 
+                        border: '2px solid #ffffff',
+                        width: '12px',
+                        height: '12px',
+                        left: '-6px'
+                    }}
+                />
+            )}
+            
+            {/* Right handle for file connections to prompts */}
+            {bubble.type === 'file' && (
+                <Handle 
+                    type="source" 
+                    position={Position.Right} 
+                    isConnectable={isConnectable}
+                    style={{ 
+                        background: '#f59e0b', 
+                        border: '2px solid #ffffff',
+                        width: '12px',
+                        height: '12px',
+                        right: '-6px'
+                    }}
+                />
+            )}
+            
+            {/* Left handle for human prompts to receive file connections */}
+            {isHuman && (
+                <Handle 
+                    type="target" 
+                    position={Position.Left} 
+                    isConnectable={isConnectable}
+                    style={{ 
+                        background: '#64748b', 
+                        border: '2px solid #f59e0b',
+                        width: '12px',
+                        height: '12px',
+                        left: '-6px'
+                    }}
+                />
+            )}
+            
+            {/* Right handle for human prompts to receive file connections */}
+            {isHuman && (
+                <Handle 
+                    type="target" 
+                    position={Position.Right} 
+                    isConnectable={isConnectable}
+                    style={{ 
+                        background: '#64748b', 
+                        border: '2px solid #f59e0b',
+                        width: '12px',
+                        height: '12px',
+                        right: '-6px'
+                    }}
+                />
             )}
             
             <header className={`drag-handle cursor-pointer flex items-center justify-between rounded-t-xl border-slate-700/50 px-4 py-2 peer ${bubble.type == "file" ? 'bg-slate-850' : isHuman ? 'bg-slate-850' : 'bg-blue-700'}`}>
@@ -90,11 +167,36 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
                 </>
             )}
             
-            {(bubble.type === 'message' && isHuman) && (
-                <Handle type="source" position={Position.Bottom} isConnectable={isConnectable} style={{ background: 'transparent', border: 'none' }}/>
+            {/* Bottom handle for human prompts to connect to AI responses */}
+            {isHuman && (
+                <Handle 
+                    type="source" 
+                    position={Position.Bottom} 
+                    isConnectable={isConnectable} 
+                    style={{ 
+                        background: '#3b82f6', 
+                        border: '2px solid #ffffff',
+                        width: '12px',
+                        height: '12px',
+                        bottom: '-6px'
+                    }}
+                />
             )}
-            {bubble.type === 'file' && (
-                <Handle type="source" position={Position.Bottom} isConnectable={isConnectable} style={{ background: 'transparent', border: 'none' }}/>
+            
+            {/* Right handle for AI responses to connect to human prompts */}
+            {isAI && (
+                <Handle 
+                    type="source" 
+                    position={Position.Right} 
+                    isConnectable={isConnectable} 
+                    style={{ 
+                        background: '#10b981', 
+                        border: '2px solid #ffffff',
+                        width: '12px',
+                        height: '12px',
+                        right: '-6px'
+                    }}
+                />
             )}
         </div>
     );
