@@ -14,7 +14,7 @@ import ReactFlow, {
   OnConnect,
   ReactFlowProvider,
   useReactFlow,
-  NodeChange,
+  Connection,
 } from 'reactflow';
 
 import { BoardState, Message, ChatBubbleType, LLMProvider, ViewMode } from '../types';
@@ -23,6 +23,7 @@ import BoardHeader from './BoardHeader';
 import Composer from './Composer';
 import Guide from './Guide';
 import ChatBubbleNode from './ChatBubbleNode';
+import DisconnectModal from './DisconnectModal';
 
 const initialBoard: BoardState = {
   id: 'board-1',
@@ -33,7 +34,7 @@ const initialBoard: BoardState = {
       title: 'Initial Query',
       position: { x: 50, y: 50 },
       messages: [
-        { id: 'msg-1-1', text: 'What are the most popular state management libraries for React in 2025?', sender: 'user', timestamp: '4:01 PM' },
+        { id: 'msg-1-1', text: 'What are the most popular state management libraries for React in 2025?', sender: 'human', timestamp: '4:01 PM' },
       ],
       isShrunk: false,
       type: 'message',
@@ -44,7 +45,7 @@ const initialBoard: BoardState = {
       parentId: 'bubble-1',
       position: { x: 520, y: 80 },
       messages: [
-        { id: 'msg-2-1', text: 'Tell me more about Zustand. Why is it gaining popularity?', sender: 'llm', timestamp: '4:03 PM' },
+        { id: 'msg-2-1', text: 'Tell me more about Zustand. Why is it gaining popularity?', sender: 'ai', timestamp: '4:03 PM' },
       ],
       isShrunk: false,
       type: 'message',
@@ -71,6 +72,9 @@ function FlowBoard() {
   const [showGuide, setShowGuide] = useState(true);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const reactFlowInstance = useReactFlow();
+  
+  const [isDisconnectModalOpen, setDisconnectModalOpen] = useState(false);
+  const [edgeToDisconnect, setEdgeToDisconnect] = useState<Edge | null>(null);
 
   const onNodesChange: OnNodesChange = useCallback(
     (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -81,11 +85,45 @@ function FlowBoard() {
     (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
     [setEdges]
   );
+  
+  const isValidConnection = (connection: Connection) => {
+    const sourceNode = nodes.find(node => node.id === connection.source);
+    const targetNode = nodes.find(node => node.id === connection.target);
+    
+    if (!sourceNode || !targetNode) return false;
+    
+    // Files can only connect to human (prompt) nodes
+    if (sourceNode.data.bubble.type === 'file') {
+      return targetNode.data.bubble.type === 'message' && targetNode.data.bubble.messages[0]?.sender === 'human';
+    }
+    
+    return true;
+  };
 
   const onConnect: OnConnect = useCallback(
-    (connection) => setEdges((eds) => addEdge({ ...connection, type: 'smoothstep' }, eds)),
-    [setEdges]
+    (connection) => {
+        if (isValidConnection(connection)) {
+            setEdges((eds) => addEdge({ ...connection, type: 'smoothstep' }, eds));
+        }
+    },
+    [setEdges, nodes]
   );
+  
+  const onEdgeClick = (_: React.MouseEvent, edge: Edge) => {
+    const sourceNode = nodes.find(node => node.id === edge.source);
+    if (sourceNode?.data.bubble.type === 'file') {
+      setEdgeToDisconnect(edge);
+      setDisconnectModalOpen(true);
+    }
+  };
+  
+  const confirmDisconnect = () => {
+    if (edgeToDisconnect) {
+      setEdges((eds) => eds.filter((e) => e.id !== edgeToDisconnect.id));
+      setEdgeToDisconnect(null);
+    }
+    setDisconnectModalOpen(false);
+  };
   
   const removeNode = useCallback((nodeId: string) => {
     setNodes((nds) => nds.filter((node) => node.id !== nodeId));
@@ -136,7 +174,7 @@ function FlowBoard() {
       messages: [{
         id: `msg-${Date.now()}`,
         text,
-        sender: 'user',
+        sender: 'human',
         timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric' }),
       }],
       position: newPosition,
@@ -203,6 +241,8 @@ function FlowBoard() {
     setBoardState(prev => ({ ...prev, viewMode: mode }));
   };
 
+  const sourceNode = nodes.find(node => node.id === edgeToDisconnect?.source);
+  const targetNode = nodes.find(node => node.id === edgeToDisconnect?.target);
 
   return (
     <div className="flex h-screen w-full bg-slate-900">
@@ -232,7 +272,9 @@ function FlowBoard() {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
+            onEdgeClick={onEdgeClick}
             nodeTypes={nodeTypes}
+            isValidConnection={isValidConnection}
             fitView
           >
             <Controls style={{ top: 20, right: 20, left: 'auto', bottom: 'auto' }} />
@@ -241,6 +283,13 @@ function FlowBoard() {
         </main>
         <Composer bubbles={boardState.bubbles} onSendMessage={handleSendMessage} />
       </div>
+      <DisconnectModal 
+        isOpen={isDisconnectModalOpen}
+        onClose={() => setDisconnectModalOpen(false)}
+        onConfirm={confirmDisconnect}
+        fileName={sourceNode?.data.bubble.title ?? ''}
+        nodeTitle={targetNode?.data.bubble.title ?? ''}
+      />
     </div>
   );
 }
