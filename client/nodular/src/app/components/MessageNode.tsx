@@ -9,7 +9,7 @@ interface MessageNodeProps {
 }
 
 export default function MessageNode({ message, onAddNode, viewMode, isLastMessage }: MessageNodeProps) {
-    const isUser = message.sender === 'user';
+    const isUser = message.sender === 'human';
 
     const handleCreateNode = () => {
         // TBD: Logic for creating a new node from AI message

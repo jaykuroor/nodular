@@ -1,7 +1,7 @@
 export interface Message {
   id: string;
   text: string;
-  sender: 'user' | 'llm';
+  sender: 'human' | 'ai';
   timestamp: string;
 }
 
