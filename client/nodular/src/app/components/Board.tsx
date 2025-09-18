@@ -249,7 +249,7 @@ function FlowBoard() {
                     }
                 }};
             } else if (sourceNode?.data.bubble.type === 'system') {
-                edgeStyle = { stroke: '#a78bfa', strokeWidth: 2 }; // Purple for system
+                edgeStyle = { stroke: '#ffffff', strokeWidth: 2 }; // Purple for system
             } else if (sourceNode?.data.bubble.messages[0]?.sender === 'ai') {
                 edgeStyle = { stroke: '#10b981', strokeWidth: 2 }; // Green for AI
             }
@@ -386,7 +386,7 @@ function FlowBoard() {
         let edgeStyle = {};
         
         if (parentBubble?.type === 'system') {
-            edgeStyle = { stroke: '#a78bfa', strokeWidth: 2 }; // Purple for system
+            edgeStyle = { stroke: '#ffffff', strokeWidth: 2 }; // Purple for system
         } else if (parentBubble?.messages[0]?.sender === 'human') {
           edgeStyle = { stroke: '#3b82f6', strokeWidth: 2 };
         } else if (parentBubble?.messages[0]?.sender === 'ai') {
