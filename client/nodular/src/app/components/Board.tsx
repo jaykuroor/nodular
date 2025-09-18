@@ -28,6 +28,7 @@ import Guide from './Guide';
 import ChatBubbleNode from './ChatBubbleNode';
 import DisconnectModal from './DisconnectModal';
 import ButtonEdge from './ButtonEdge';
+import SystemNode from './SystemPromptNode'; // Import the new SystemNode
 
 const initialBoard: BoardState = {
   id: 'board-1',
@@ -36,28 +37,27 @@ const initialBoard: BoardState = {
     {
       id: 'bubble-0',
       title: 'System Prompt',
-      position: { x: 0, y: 0 },
-      messages: [
-        { id: 'msg-0-1', text: 'What are the most popular state management libraries for React in 2025?', sender: 'human', timestamp: '4:01 PM' },
-      ],
+      position: { x: 250, y: 50 },
+      messages: [{ id: 'msg-0-1', text: 'You are a helpful assistant specializing in frontend development.', sender: 'human', timestamp: '4:00 PM' }],
       isShrunk: false,
       type: 'system',
     },
     {
       id: 'bubble-1',
       title: 'Initial Query',
-      position: { x: 500, y: 350 },
+      position: { x: 500, y: 450 },
       messages: [
         { id: 'msg-1-1', text: 'What are the most popular state management libraries for React in 2025?', sender: 'human', timestamp: '4:01 PM' },
       ],
       isShrunk: false,
       type: 'message',
+      parentId: 'bubble-0', // Connect to System Prompt
     },
     {
       id: 'bubble-2',
       title: 'Zustand Deep Dive',
       parentId: 'bubble-1',
-      position: { x: 0, y: 700 },
+      position: { x: 0, y: 800 },
       messages: [
         { id: 'msg-2-1', text: 'Tell me more about Zustand. Why is it gaining popularity?', sender: 'ai', timestamp: '4:03 PM' },
       ],
@@ -76,6 +76,7 @@ const allBoards = [
 
 const nodeTypes = {
   chatBubble: ChatBubbleNode,
+  system: SystemNode,
 };
 
 const getClosestConnectionPoint = (sourceNode: Node, targetNode: Node) => {
@@ -218,6 +219,12 @@ function FlowBoard() {
       return targetNode.data.bubble.type === 'message' && 
              targetNode.data.bubble.messages[0]?.sender === 'human';
     }
+
+    // System node can connect to human nodes
+    if (sourceNode.data.bubble.type === 'system') {
+      return targetNode.data.bubble.type === 'message' &&
+             targetNode.data.bubble.messages[0]?.sender === 'human';
+    }
     
     return false;
   };
@@ -227,7 +234,7 @@ function FlowBoard() {
         if (isValidConnection(connection)) {
             const sourceNode = nodes.find(node => node.id === connection.source);
             
-            let edgeStyle = {};
+            let edgeStyle = { stroke: '#3b82f6', strokeWidth: 2 }; // Default blue
             let edgeType = 'smoothstep';
             let edgeData = {};
 
@@ -241,10 +248,10 @@ function FlowBoard() {
                         setDisconnectModalOpen(true);
                     }
                 }};
-            } else if (sourceNode?.data.bubble.messages[0]?.sender === 'human') {
-                edgeStyle = { stroke: '#3b82f6', strokeWidth: 2 }; 
+            } else if (sourceNode?.data.bubble.type === 'system') {
+                edgeStyle = { stroke: '#a78bfa', strokeWidth: 2 }; // Purple for system
             } else if (sourceNode?.data.bubble.messages[0]?.sender === 'ai') {
-                edgeStyle = { stroke: '#10b981', strokeWidth: 2 };
+                edgeStyle = { stroke: '#10b981', strokeWidth: 2 }; // Green for AI
             }
             
             setEdges((eds) => addEdge({ 
@@ -358,20 +365,29 @@ function FlowBoard() {
 
   useEffect(() => {
     const bubbles = boardState.bubbles;
-    const initialNodes = bubbles.map((bubble) => ({
-      id: bubble.id,
-      type: 'chatBubble',
-      position: bubble.position,
-      data: { bubble, onRemove: removeNode, onToggleShrink: toggleShrink, isConnecting: !!connectingNode, connectingNode },
-    }));
+    const initialNodes = bubbles.map((bubble) => {
+        let nodeType = 'chatBubble';
+        if (bubble.type === 'system') {
+            nodeType = 'system';
+        }
+
+        return {
+            id: bubble.id,
+            type: nodeType,
+            position: bubble.position,
+            data: { bubble, onRemove: removeNode, onToggleShrink: toggleShrink, isConnecting: !!connectingNode, connectingNode },
+        };
+    });
     
-    const messageChainEdges = bubbles
-      .filter((bubble) => bubble.parentId && bubble.type === 'message')
+    const initialEdges = bubbles
+      .filter((bubble) => bubble.parentId)
       .map((bubble) => {
         const parentBubble = bubbles.find(b => b.id === bubble.parentId);
         let edgeStyle = {};
         
-        if (parentBubble?.messages[0]?.sender === 'human') {
+        if (parentBubble?.type === 'system') {
+            edgeStyle = { stroke: '#a78bfa', strokeWidth: 2 }; // Purple for system
+        } else if (parentBubble?.messages[0]?.sender === 'human') {
           edgeStyle = { stroke: '#3b82f6', strokeWidth: 2 };
         } else if (parentBubble?.messages[0]?.sender === 'ai') {
           edgeStyle = { stroke: '#10b981', strokeWidth: 2 };
@@ -410,7 +426,7 @@ function FlowBoard() {
       }).filter(Boolean);
     
     setNodes(initialNodes);
-    setEdges([...messageChainEdges, ...fileEdges as Edge[]]);
+    setEdges([...initialEdges, ...fileEdges as Edge[]]);
   }, [boardState.bubbles, removeNode, toggleShrink, connectingNode]);
 
   const handleSendMessage = (text: string, bubbleId: string) => {
