@@ -117,10 +117,10 @@ export default function SystemNode({ data }: { data: any }) {
 
                 {/* Advanced Settings */}
                 {showAdvanced && (
-                    <div className="flex gap-4 pt-2 items-center">
+                    <div className="flex gap-4 px-4 py-8 items-start inset-shadow-sm inset-shadow-slate-950/80 rounded-lg">
                         {/* Temperature Control */}
                         <div className="flex flex-col items-center gap-2">
-                            <label htmlFor="temperature" className="text-sm font-medium text-slate-300">Temperature</label>
+                            <label htmlFor="temperature" className="text-xs font-medium text-slate-300">Temperature</label>
                             <div className="flex items-center gap-1 rounded-md bg-slate-900 hover:bg-slate-950 p-1">
                                 <input
                                     type="number"
