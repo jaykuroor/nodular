@@ -15,6 +15,7 @@ import ReactFlow, {
   ReactFlowProvider,
   useReactFlow,
   Connection,
+  NodeChange,
 } from 'reactflow';
 
 import { BoardState, Message, ChatBubbleType, LLMProvider, ViewMode } from '../types';
@@ -77,9 +78,20 @@ function FlowBoard() {
   const [edgeToDisconnect, setEdgeToDisconnect] = useState<Edge | null>(null);
 
   const onNodesChange: OnNodesChange = useCallback(
-    (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
+    (changes: NodeChange[]) => {
+      setNodes((nds) => applyNodeChanges(changes, nds));
+    },
     [setNodes]
   );
+
+  const onNodeDragStop = (_: React.MouseEvent, node: Node) => {
+    setBoardState((prev) => ({
+      ...prev,
+      bubbles: prev.bubbles.map((bubble) =>
+        bubble.id === node.id ? { ...bubble, position: node.position } : bubble
+      ),
+    }));
+  };
 
   const onEdgesChange: OnEdgesChange = useCallback(
     (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
@@ -91,6 +103,14 @@ function FlowBoard() {
     const targetNode = nodes.find(node => node.id === connection.target);
     
     if (!sourceNode || !targetNode) return false;
+
+    const connectionExists = edges.some(
+        (edge) =>
+          (edge.source === connection.source && edge.target === connection.target) ||
+          (edge.source === connection.target && edge.target === connection.source)
+      );
+
+    if (connectionExists) return false;
     
     // Files can only connect to human (prompt) nodes
     if (sourceNode.data.bubble.type === 'file') {
@@ -123,24 +143,25 @@ function FlowBoard() {
             
             let edgeStyle = {};
             let edgeType = 'smoothstep';
-            
-            // Style edges based on connection type
+            let targetHandle = 'top';
+
             if (sourceNode?.data.bubble.type === 'file') {
-                edgeStyle = { stroke: '#f59e0b', strokeWidth: 2 }; // Orange for file connections
+                edgeStyle = { stroke: '#f59e0b', strokeWidth: 2 };
+                targetHandle = connection.targetHandle || 'file-left';
             } else if (sourceNode?.data.bubble.messages[0]?.sender === 'human') {
-                edgeStyle = { stroke: '#3b82f6', strokeWidth: 2 }; // Blue for prompt->response
+                edgeStyle = { stroke: '#3b82f6', strokeWidth: 2 }; 
             } else if (sourceNode?.data.bubble.messages[0]?.sender === 'ai') {
-                edgeStyle = { stroke: '#10b981', strokeWidth: 2 }; // Green for response->prompt
+                edgeStyle = { stroke: '#10b981', strokeWidth: 2 };
             }
             
             setEdges((eds) => addEdge({ 
                 ...connection, 
                 type: edgeType,
                 style: edgeStyle,
-                animated: sourceNode?.data.bubble.type === 'file'
+                animated: sourceNode?.data.bubble.type === 'file',
+                targetHandle
             }, eds));
             
-            // Update bubble state to track connections
             setBoardState(prev => ({
                 ...prev,
                 bubbles: prev.bubbles.map(bubble => {
@@ -156,13 +177,7 @@ function FlowBoard() {
                             connectedTo: connection.target!
                         };
                     }
-                    if (bubble.id === connection.target && sourceNode?.data.bubble.messages[0]?.sender === 'human') {
-                        return {
-                            ...bubble,
-                            parentId: connection.source!
-                        };
-                    }
-                    if (bubble.id === connection.target && sourceNode?.data.bubble.messages[0]?.sender === 'ai') {
+                    if (bubble.id === connection.target) {
                         return {
                             ...bubble,
                             parentId: connection.source!
@@ -173,12 +188,11 @@ function FlowBoard() {
             }));
         }
     },
-    [setEdges, nodes, setBoardState]
+    [setEdges, nodes, setBoardState, edges]
   );
   
   const onEdgeClick = (_: React.MouseEvent, edge: Edge) => {
     const sourceNode = nodes.find(node => node.id === edge.source);
-    // Only show disconnect modal for file connections
     if (sourceNode?.data.bubble.type === 'file') {
       setEdgeToDisconnect(edge);
       setDisconnectModalOpen(true);
@@ -189,7 +203,6 @@ function FlowBoard() {
     if (edgeToDisconnect) {
       setEdges((eds) => eds.filter((e) => e.id !== edgeToDisconnect.id));
       
-      // Update bubble state to remove connections
       setBoardState(prev => ({
         ...prev,
         bubbles: prev.bubbles.map(bubble => {
@@ -218,7 +231,6 @@ function FlowBoard() {
     setNodes((nds) => nds.filter((node) => node.id !== nodeId));
     setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
     
-    // Update bubble state
     setBoardState(prev => ({
       ...prev,
       bubbles: prev.bubbles.filter(bubble => bubble.id !== nodeId)
@@ -256,7 +268,6 @@ function FlowBoard() {
       data: { bubble, onRemove: removeNode, onToggleShrink: toggleShrink },
     }));
     
-    // Create edges for message chains (prompt->response->prompt)
     const messageChainEdges = bubbles
       .filter((bubble) => bubble.parentId && bubble.type === 'message')
       .map((bubble) => {
@@ -264,9 +275,9 @@ function FlowBoard() {
         let edgeStyle = {};
         
         if (parentBubble?.messages[0]?.sender === 'human') {
-          edgeStyle = { stroke: '#3b82f6', strokeWidth: 2 }; // Blue for prompt->response
+          edgeStyle = { stroke: '#3b82f6', strokeWidth: 2 };
         } else if (parentBubble?.messages[0]?.sender === 'ai') {
-          edgeStyle = { stroke: '#10b981', strokeWidth: 2 }; // Green for response->prompt
+          edgeStyle = { stroke: '#10b981', strokeWidth: 2 };
         }
         
         return {
@@ -278,7 +289,6 @@ function FlowBoard() {
         };
       });
     
-    // Create edges for file connections
     const fileEdges = bubbles
       .filter(bubble => bubble.connectedTo)
       .map(bubble => ({
@@ -288,6 +298,7 @@ function FlowBoard() {
         type: 'smoothstep',
         style: { stroke: '#f59e0b', strokeWidth: 2 },
         animated: true,
+        targetHandle: 'file-left' 
       }));
     
     setNodes(initialNodes);
@@ -390,6 +401,7 @@ function FlowBoard() {
             onEdgeClick={onEdgeClick}
             nodeTypes={nodeTypes}
             isValidConnection={isValidConnection}
+            onNodeDragStop={onNodeDragStop}
             fitView
           >
             <Controls style={{ top: 20, right: 20, left: 'auto', bottom: 'auto' }} />
