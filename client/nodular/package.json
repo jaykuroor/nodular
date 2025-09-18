@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.8",
     "gsap": "^3.13.0",
     "lucide-react": "^0.544.0",
     "next": "15.5.3",
