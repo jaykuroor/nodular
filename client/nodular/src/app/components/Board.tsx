@@ -27,15 +27,26 @@ import Composer from './Composer';
 import Guide from './Guide';
 import ChatBubbleNode from './ChatBubbleNode';
 import DisconnectModal from './DisconnectModal';
+import ButtonEdge from './ButtonEdge';
 
 const initialBoard: BoardState = {
   id: 'board-1',
   name: 'State Management Research',
   bubbles: [
     {
+      id: 'bubble-0',
+      title: 'System Prompt',
+      position: { x: 0, y: 0 },
+      messages: [
+        { id: 'msg-0-1', text: 'What are the most popular state management libraries for React in 2025?', sender: 'human', timestamp: '4:01 PM' },
+      ],
+      isShrunk: false,
+      type: 'system',
+    },
+    {
       id: 'bubble-1',
       title: 'Initial Query',
-      position: { x: 400, y: 50 },
+      position: { x: 500, y: 350 },
       messages: [
         { id: 'msg-1-1', text: 'What are the most popular state management libraries for React in 2025?', sender: 'human', timestamp: '4:01 PM' },
       ],
@@ -46,7 +57,7 @@ const initialBoard: BoardState = {
       id: 'bubble-2',
       title: 'Zustand Deep Dive',
       parentId: 'bubble-1',
-      position: { x: 50, y: 400 },
+      position: { x: 0, y: 700 },
       messages: [
         { id: 'msg-2-1', text: 'Tell me more about Zustand. Why is it gaining popularity?', sender: 'ai', timestamp: '4:03 PM' },
       ],
@@ -218,9 +229,18 @@ function FlowBoard() {
             
             let edgeStyle = {};
             let edgeType = 'smoothstep';
+            let edgeData = {};
 
             if (sourceNode?.data.bubble.type === 'file') {
+                edgeType = 'buttonedge';
                 edgeStyle = { stroke: '#3b82f6', strokeWidth: 2 };
+                edgeData = { onEdgeClick: (id: string) => {
+                    const edge = edges.find(e => e.id === id);
+                    if (edge) {
+                        setEdgeToDisconnect(edge);
+                        setDisconnectModalOpen(true);
+                    }
+                }};
             } else if (sourceNode?.data.bubble.messages[0]?.sender === 'human') {
                 edgeStyle = { stroke: '#3b82f6', strokeWidth: 2 }; 
             } else if (sourceNode?.data.bubble.messages[0]?.sender === 'ai') {
@@ -232,6 +252,7 @@ function FlowBoard() {
                 type: edgeType,
                 style: edgeStyle,
                 animated: sourceNode?.data.bubble.type === 'file',
+                data: edgeData
             }, eds));
             
             setBoardState(prev => ({
@@ -263,11 +284,11 @@ function FlowBoard() {
     [setEdges, nodes, setBoardState, edges]
   );
   
-  const onEdgeClick = (_: React.MouseEvent, edge: Edge) => {
-    const sourceNode = nodes.find(node => node.id === edge.source);
-    if (sourceNode?.data.bubble.type === 'file') {
-      setEdgeToDisconnect(edge);
-      setDisconnectModalOpen(true);
+  const onEdgeClick = (edgeId: string) => {
+    const edge = edges.find(e => e.id === edgeId);
+    if(edge) {
+        setEdgeToDisconnect(edge);
+        setDisconnectModalOpen(true);
     }
   };
   
@@ -331,6 +352,10 @@ function FlowBoard() {
     }));
   }, [setNodes, setBoardState]);
 
+  const edgeTypes = {
+    buttonedge: (props: any) => <ButtonEdge {...props} data={{ ...props.data, onEdgeClick }} />,
+  };
+
   useEffect(() => {
     const bubbles = boardState.bubbles;
     const initialNodes = bubbles.map((bubble) => ({
@@ -375,9 +400,10 @@ function FlowBoard() {
                 target: bubble.connectedTo!,
                 sourceHandle,
                 targetHandle,
-                type: 'smoothstep',
+                type: 'buttonedge',
                 style: { stroke: '#3b82f6', strokeWidth: 2 },
                 animated: true,
+                data: { onEdgeClick }
             }
         }
         return null;
@@ -480,8 +506,8 @@ function FlowBoard() {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
-            onEdgeClick={onEdgeClick}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             isValidConnection={isValidConnection}
             onNodeDragStop={onNodeDragStop}
             onConnectStart={onConnectStart}

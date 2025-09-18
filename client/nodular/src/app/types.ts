@@ -15,7 +15,7 @@ export interface ChatBubbleType {
   messages: Message[];
   position: { x: number; y: number };
   isShrunk: boolean;
-  type: 'message' | 'file';
+  type: 'message' | 'file' | 'system';
   parentId?: string;
   connectedFiles?: string[]; // Array of file node IDs connected to this prompt node
   connectedTo?: string; // For file nodes, the ID of the prompt node they're connected to
