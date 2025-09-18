@@ -2,7 +2,7 @@
 
 import { Handle, Position, useNodeId } from 'reactflow';
 import { ChatBubbleType } from '../types';
-import { MoreHorizontal, MessageSquare, Maximize2, Minimize2, GripHorizontal, X, CloudUpload } from 'lucide-react';
+import { MoreHorizontal, MessageSquare, Maximize2, Minimize2, GripHorizontal, X, CloudUpload, GitBranch } from 'lucide-react';
 import MessageNode from './MessageNode';
 import FileNode from './FileNode';
 import { useCallback } from 'react';
@@ -12,17 +12,21 @@ interface ChatBubbleNodeProps {
       bubble: ChatBubbleType;
       onRemove: (id: string) => void;
       onToggleShrink: (id: string) => void;
+      isConnecting: boolean;
+      connectingNode: any;
     };
     isConnectable: boolean;
 }
 
 export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodeProps) {
-    const { bubble, onRemove, onToggleShrink } = data;
+    const { bubble, onRemove, onToggleShrink, isConnecting, connectingNode } = data;
     const nodeId = useNodeId()!;
     
     const isHuman = bubble.messages[0]?.sender === 'human';
     const isAI = bubble.messages[0]?.sender === 'ai';
     const bgColor = bubble.type === 'file' ? 'bg-slate-800' : isHuman ? 'bg-slate-600' : 'bg-blue-800';
+
+    const isFileConnecting = isConnecting && connectingNode?.type === 'file';
 
     const handleRemove = useCallback(() => {
         onRemove(nodeId);
@@ -33,7 +37,7 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
     }, [nodeId, onToggleShrink]);
 
     return (
-        <div className={`glass-pane flex flex-col shadow-2xl group z-20 rounded-xl ${bgColor} ${bubble.type === 'file' && !bubble.isShrunk ? 'max-w-210' : 'w-96'}`}>
+        <div className={`glass-pane flex flex-col shadow-2xl group z-20 rounded-xl ${bgColor} ${bubble.type === 'file' && !bubble.isShrunk ? 'max-w-210' : 'w-80vh'} ${isFileConnecting && isHuman ? 'prompt-connectable' : ''}`}>
             {/* Top handle for AI responses and human prompts */}
             {(isAI || isHuman) && (
                 <Handle 
@@ -44,20 +48,14 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
                 />
             )}
             
-            {/* Bottom handle for file connections */}
+            {/* Handles for file connections */}
             {bubble.type === 'file' && (
-                <Handle 
-                    type="source" 
-                    position={Position.Bottom} 
-                    isConnectable={isConnectable}
-                    style={{ 
-                        background: '#f59e0b', 
-                        border: '2px solid #ffffff',
-                        width: '12px',
-                        height: '12px',
-                        bottom: '-6px'
-                    }}
-                />
+                <>
+                    <Handle type="source" position={Position.Top} id="top" className="invisible" isConnectable={isConnectable} />
+                    <Handle type="source" position={Position.Right} id="right" className="invisible" isConnectable={isConnectable} />
+                    <Handle type="source" position={Position.Bottom} id="bottom" className="invisible" isConnectable={isConnectable} />
+                    <Handle type="source" position={Position.Left} id="left" className="invisible" isConnectable={isConnectable} />
+                </>
             )}
             
             {/* Left and Right handles for human prompts to receive file connections */}
@@ -128,6 +126,18 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
                                     )}
                                 </div>
                             )}
+                             <div className="relative p-4 pt-0">
+                                <div className="flex justify-center items-center gap-2 text-sm bg-black/20 rounded-xl px-2.5 py-2 text-slate-100 peer-hover:bg-black/30">
+                                    <GitBranch size={15} /> Connect File
+                                </div>
+                                <Handle
+                                    type="source"
+                                    position={Position.Bottom}
+                                    id="connect-button-handle"
+                                    isConnectable={isConnectable}
+                                    className="!w-full !h-full !top-0 !left-0 !transform-none !border-none !bg-transparent !cursor-pointer peer"
+                                />
+                            </div>
                         </>
                     )}
                 </>

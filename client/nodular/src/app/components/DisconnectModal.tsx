@@ -20,7 +20,7 @@ export default function DisconnectModal({ isOpen, onClose, onConfirm, fileName, 
         </p>
         <div className="mt-6 flex justify-end gap-2">
           <button onClick={onClose} className="rounded-md bg-slate-600 px-4 py-2 text-white">Cancel</button>
-          <button onClick={onConfirm} className="rounded-md bg-red-600 px-4 py-2 text-white">Disconnect</button>
+          <button onClick={onConfirm} className="rounded-md bg-red-600 px-4 py-2 text-white hover:cursor-pointer hover:bg-red-800 hover:outline-white hover:outline-1">Disconnect</button>
         </div>
       </div>
     </div>
