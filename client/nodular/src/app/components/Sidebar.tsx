@@ -92,7 +92,7 @@ export default function Sidebar({ boards, onSelectBoard, selectedLLM, onSelectLL
                         <select
                             value={selectedLLM}
                             onChange={(e) => onSelectLLM(e.target.value as LLMProvider)}
-                            className="w-full rounded-md bg-slate-700 border border-slate-600 py-2 px-3 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-slate-600"
+                            className="w-full rounded-md bg-slate-700 border border-slate-600 py-2 px-3 text-sm font-semibold text-white focus:outline-none focus:ring-1 focus:ring-blue-500 hover:bg-slate-600"
                         >
                             <option value="gpt-oss-120b">GPT OSS 120B</option>
                             <option value="gpt-oss-20b">GPT OSS 20B</option>

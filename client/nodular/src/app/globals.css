@@ -103,52 +103,29 @@ body.connecting-file {
     transform: scale(1.1);
 }
 
-.thermostat-container {
-  position: relative;
-  width: 100%;
-  height: 20px;
-  display: flex;
-  align-items: center;
-}
-
-.thermostat-track {
-  position: absolute;
-  width: 100%;
-  height: 4px;
-  background-color: #4b5563; /* gray-600 */
-  border-radius: 2px;
-}
-
-.thermostat-thumb {
-  position: absolute;
-  width: 16px;
-  height: 16px;
-  background-color: #3b82f6; /* blue-500 */
-  border-radius: 50%;
-  border: 2px solid white;
-  cursor: pointer;
-}
-
-input[type="range"].thermostat-input {
+/* Hide spin buttons on number inputs */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
   -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 100%;
-  background: transparent;
-  position: absolute;
-  cursor: pointer;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
 }
 
-input[type="range"].thermostat-input::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
+.temp-button-up {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: rgba(239, 68, 68, 0.7);
 }
-
-input[type="range"].thermostat-input::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
+.temp-button-up:hover {
+    background-color: rgba(239, 68, 68, 0.3);
+    color: rgba(239, 68, 68, 1);
+}
+.temp-button-down {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: rgba(59, 130, 246, 0.7);
+}
+.temp-button-down:hover {
+    background-color: rgba(59, 130, 246, 0.3);
+    color: rgba(59, 130, 246, 1);
 }
