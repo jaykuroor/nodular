@@ -1,5 +1,3 @@
-export type LLMProvider = 'gpt-oss-120b' | 'claude-v1' | 'local-model';
-
 export interface Message {
   id: string;
   text: string;
@@ -29,3 +27,13 @@ export interface BoardState {
   bubbles: ChatBubbleType[];
   viewMode: ViewMode;
 }
+
+export type LLMProvider = 
+  'gpt-oss-120b' |
+  'gpt-oss-20b' |
+  'qwen-3-32b' |
+  'llama-4-scout' |
+  'kimi-k2' |
+  'llama-3.3-70b' |
+  'llama-4-maverick' |
+  'whisper-large-v3';
