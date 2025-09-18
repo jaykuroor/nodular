@@ -91,27 +91,35 @@ function FlowBoard() {
     const targetNode = nodes.find(node => node.id === connection.target);
     
     if (!sourceNode || !targetNode) return false;
+
+    const sourceBubble = sourceNode.data.bubble;
+    const targetBubble = targetNode.data.bubble;
     
-    // Files can only connect to human (prompt) nodes
-    if (sourceNode.data.bubble.type === 'file') {
-      return targetNode.data.bubble.type === 'message' && targetNode.data.bubble.messages[0]?.sender === 'human';
-    }
+    // Allow connections ONLY from a 'file' node to a 'human' message node (a prompt).
+    const isSourceFile = sourceBubble.type === 'file';
+    const isTargetPrompt = targetBubble.type === 'message' && targetBubble.messages[0]?.sender === 'human';
     
-    return true;
+    return isSourceFile && isTargetPrompt;
   };
 
   const onConnect: OnConnect = useCallback(
     (connection) => {
         if (isValidConnection(connection)) {
-            setEdges((eds) => addEdge({ ...connection, type: 'smoothstep' }, eds));
+            const newEdge = { 
+                ...connection, 
+                type: 'smoothstep',
+                // Add a custom data property to identify disconnectable edges
+                data: { isFileConnection: true } 
+            };
+            setEdges((eds) => addEdge(newEdge, eds));
         }
     },
     [setEdges, nodes]
   );
   
   const onEdgeClick = (_: React.MouseEvent, edge: Edge) => {
-    const sourceNode = nodes.find(node => node.id === edge.source);
-    if (sourceNode?.data.bubble.type === 'file') {
+    // Only open the disconnect modal for file connections
+    if (edge.data?.isFileConnection) {
       setEdgeToDisconnect(edge);
       setDisconnectModalOpen(true);
     }
@@ -157,6 +165,8 @@ function FlowBoard() {
         source: bubble.parentId!,
         target: bubble.id,
         type: 'smoothstep',
+        // Identify programmatic edges as non-disconnectable
+        data: { isFileConnection: false } 
       }));
     setNodes(initialNodes);
     setEdges(initialEdges);
@@ -197,6 +207,7 @@ function FlowBoard() {
         source: parentNode.id,
         target: newNode.id,
         type: 'smoothstep',
+        data: { isFileConnection: false }
       };
       setEdges((eds) => eds.concat(newEdge));
     }

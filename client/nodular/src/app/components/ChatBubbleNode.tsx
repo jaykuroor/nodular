@@ -16,6 +16,12 @@ interface ChatBubbleNodeProps {
     isConnectable: boolean;
 }
 
+const handleStyle = {
+    width: 10,
+    height: 10,
+    background: '#FFF',
+};
+
 export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodeProps) {
     const { bubble, onRemove, onToggleShrink } = data;
     const nodeId = useNodeId()!;
@@ -33,8 +39,36 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
 
     return (
         <div className={`glass-pane flex flex-col shadow-2xl group z-20 rounded-xl ${bgColor} ${bubble.type === 'file' && !bubble.isShrunk ? 'max-w-210' : 'w-96'}`}>
-            {bubble.type === 'message' && (
-                <Handle type="target" position={Position.Top} isConnectable={isConnectable} style={{ background: 'transparent', border: 'none' }}/>
+            
+            {/* Handles for File Nodes */}
+            {bubble.type === 'file' && (
+                <>
+                    <Handle type="source" position={Position.Left} id="l" style={handleStyle} isConnectable={isConnectable} />
+                    <Handle type="source" position={Position.Right} id="r" style={handleStyle} isConnectable={isConnectable} />
+                </>
+            )}
+
+            {/* Handles for Prompt (Human) Nodes */}
+            {bubble.type === 'message' && isHuman && (
+                <>
+                    {/* Target from a previous Response node */}
+                    <Handle type="target" position={Position.Top} id="t" style={handleStyle} isConnectable={isConnectable} />
+                    {/* Targets from File nodes */}
+                    <Handle type="target" position={Position.Left} id="l" style={handleStyle} isConnectable={isConnectable} />
+                    <Handle type="target" position={Position.Right} id="r" style={handleStyle} isConnectable={isConnectable} />
+                    {/* Source to a new Response node */}
+                    <Handle type="source" position={Position.Bottom} id="b" style={handleStyle} isConnectable={isConnectable} />
+                </>
+            )}
+
+            {/* Handles for Response (AI) Nodes */}
+            {bubble.type === 'message' && !isHuman && (
+                <>
+                    {/* Target from a previous Prompt node */}
+                    <Handle type="target" position={Position.Right} id="r" style={handleStyle} isConnectable={isConnectable} />
+                     {/* Source to a new Prompt node */}
+                    <Handle type="source" position={Position.Bottom} id="b" style={handleStyle} isConnectable={isConnectable} />
+                </>
             )}
             
             <header className={`drag-handle cursor-pointer flex items-center justify-between rounded-t-xl border-slate-700/50 px-4 py-2 peer ${bubble.type == "file" ? 'bg-slate-850' : isHuman ? 'bg-slate-850' : 'bg-blue-700'}`}>
@@ -88,13 +122,6 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
                         </>
                     )}
                 </>
-            )}
-            
-            {(bubble.type === 'message' && isHuman) && (
-                <Handle type="source" position={Position.Bottom} isConnectable={isConnectable} style={{ background: 'transparent', border: 'none' }}/>
-            )}
-            {bubble.type === 'file' && (
-                <Handle type="source" position={Position.Bottom} isConnectable={isConnectable} style={{ background: 'transparent', border: 'none' }}/>
             )}
         </div>
     );
