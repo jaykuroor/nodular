@@ -28,7 +28,8 @@ import Guide from './Guide';
 import ChatBubbleNode from './ChatBubbleNode';
 import DisconnectModal from './DisconnectModal';
 import ButtonEdge from './ButtonEdge';
-import SystemNode from './SystemPromptNode'; // Import the new SystemNode
+import SystemNode from './SystemPromptNode';
+import Watermark from './Watermark';
 
 const initialBoard: BoardState = {
   id: 'board-1',
@@ -494,6 +495,8 @@ function FlowBoard() {
   const sourceNodeForModal = nodes.find(node => node.id === edgeToDisconnect?.source);
   const targetNodeForModal = nodes.find(node => node.id === edgeToDisconnect?.target);
 
+  const proOptions = { hideAttribution: true };
+  
   return (
     <div className="flex h-screen w-full bg-slate-900">
       <Sidebar
@@ -531,7 +534,10 @@ function FlowBoard() {
             onNodeMouseEnter={(_, node) => setTargetNode(node)}
             onNodeMouseLeave={() => setTargetNode(null)}
             fitView
+            panOnDrag={!nodes.some(node => node.data.isFocused)}
+            proOptions={proOptions}
           >
+            <Watermark />
             <Controls style={{ top: 20, right: 20, left: 'auto', bottom: 'auto' }} />
             <Background />
           </ReactFlow>
