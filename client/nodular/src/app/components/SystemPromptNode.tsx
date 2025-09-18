@@ -86,7 +86,7 @@ export default function SystemNode({ data }: { data: any }) {
 
                 <div className="flex justify-between items-center gap-4">
                     {/* Advanced Settings Button */}
-                    <button onClick={() => { setShowAdvanced(!showAdvanced) }} className="flex items-center gap-2 text-xs bg-black/20 rounded-xl px-2.5 py-2 text-slate-100 hover:text-white hover:bg-black/30 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    <button onClick={() => { setShowAdvanced(!showAdvanced) }} className="flex items-center gap-2 text-xs bg-slate-900 rounded-xl px-2.5 py-2 text-slate-100 hover:text-white hover:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500">
                         <Wrench size={15} /> {showAdvanced ? 'Hide' : 'Show'} Advanced Settings
                     </button>
                     {/* Model Selector */}
