@@ -24,7 +24,7 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
     
     const isHuman = bubble.messages[0]?.sender === 'human';
     const isAI = bubble.messages[0]?.sender === 'ai';
-    const bgColor = bubble.type === 'file' ? 'bg-slate-800' : isHuman ? 'bg-slate-600' : 'bg-blue-800';
+    const bgColor = bubble.type === 'file' ? 'bg-slate-800' : isHuman ? 'bg-slate-600' : 'bg-blue-700';
 
     const isFileConnecting = isConnecting && connectingNode?.type === 'file';
 
@@ -37,7 +37,7 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
     }, [nodeId, onToggleShrink]);
 
     return (
-        <div className={`glass-pane flex flex-col shadow-2xl group z-20 rounded-xl ${bgColor} ${bubble.type === 'file' && !bubble.isShrunk ? 'max-w-210' : 'w-80vh'} ${isFileConnecting && isHuman ? 'prompt-connectable' : ''}`}>
+        <div className={`${isAI ? `response-node` : `glass-pane`} flex flex-col shadow-2xl group z-20 rounded-xl ${bgColor} ${bubble.type === 'file' && !bubble.isShrunk ? 'max-w-210' : 'w-80vh'} ${isFileConnecting && isHuman ? 'prompt-connectable' : ''}`}>
             {/* Top handle for AI responses and human prompts */}
             {(isAI || isHuman) && (
                 <Handle 
@@ -78,7 +78,7 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
                 </>
             )}
             
-            <header className={`drag-handle cursor-pointer flex items-center justify-between rounded-t-xl border-slate-700/50 px-4 py-2 peer ${bubble.type == "file" ? 'bg-slate-850' : isHuman ? 'bg-slate-850' : 'bg-blue-700'}`}>
+            <header className={`drag-handle cursor-pointer flex items-center justify-between rounded-t-xl px-4 py-2 peer ${bubble.type == "file" ? 'bg-slate-850' : isHuman ? 'bg-slate-850' : 'bg-blue-700'}`}>
                 {bubble.file ? <CloudUpload size={16} /> : <MessageSquare size={16} className="text-blue-400" />}
                 <div className="flex items-center gap-2 truncate">
                     <GripHorizontal size={16} className='opacity-40' />
@@ -127,7 +127,7 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
                                 </div>
                             )}
                              <div className="relative p-4 pt-0">
-                                <div className="flex justify-center items-center gap-2 text-sm bg-black/20 rounded-xl px-2.5 py-2 text-slate-100 peer-hover:bg-black/30">
+                                <div className="flex justify-center items-center gap-2 text-sm bg-black/20 rounded-xl px-2.5 py-2 text-slate-100 peer-hover:bg-black/30 transition-transform peer-hover:scale-105">
                                     <GitBranch size={15} /> Connect File
                                 </div>
                                 <Handle
