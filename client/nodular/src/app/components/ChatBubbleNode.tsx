@@ -39,79 +39,45 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
                 <Handle 
                     type="target" 
                     position={Position.Top} 
-                    isConnectable={isConnectable} 
-                    style={{ 
-                        background: '#64748b', 
-                        border: '2px solid #ffffff',
-                        width: '12px',
-                        height: '12px',
-                        top: '-6px'
-                    }}
+                    isConnectable={isConnectable}
+                    className="invisible"
                 />
             )}
             
-            {/* Left handle for file connections to prompts */}
+            {/* Bottom handle for file connections */}
             {bubble.type === 'file' && (
                 <Handle 
                     type="source" 
-                    position={Position.Left} 
+                    position={Position.Bottom} 
                     isConnectable={isConnectable}
                     style={{ 
                         background: '#f59e0b', 
                         border: '2px solid #ffffff',
                         width: '12px',
                         height: '12px',
-                        left: '-6px'
+                        bottom: '-6px'
                     }}
                 />
             )}
             
-            {/* Right handle for file connections to prompts */}
-            {bubble.type === 'file' && (
-                <Handle 
-                    type="source" 
-                    position={Position.Right} 
-                    isConnectable={isConnectable}
-                    style={{ 
-                        background: '#f59e0b', 
-                        border: '2px solid #ffffff',
-                        width: '12px',
-                        height: '12px',
-                        right: '-6px'
-                    }}
-                />
-            )}
-            
-            {/* Left handle for human prompts to receive file connections */}
+            {/* Left and Right handles for human prompts to receive file connections */}
             {isHuman && (
-                <Handle 
-                    type="target" 
-                    position={Position.Left} 
-                    isConnectable={isConnectable}
-                    style={{ 
-                        background: '#64748b', 
-                        border: '2px solid #f59e0b',
-                        width: '12px',
-                        height: '12px',
-                        left: '-6px'
-                    }}
-                />
-            )}
-            
-            {/* Right handle for human prompts to receive file connections */}
-            {isHuman && (
-                <Handle 
-                    type="target" 
-                    position={Position.Right} 
-                    isConnectable={isConnectable}
-                    style={{ 
-                        background: '#64748b', 
-                        border: '2px solid #f59e0b',
-                        width: '12px',
-                        height: '12px',
-                        right: '-6px'
-                    }}
-                />
+                <>
+                    <Handle 
+                        type="target" 
+                        position={Position.Left} 
+                        id="file-left"
+                        isConnectable={isConnectable}
+                        className="invisible"
+                    />
+                    <Handle 
+                        type="target" 
+                        position={Position.Right} 
+                        id="file-right"
+                        isConnectable={isConnectable}
+                        className="invisible"
+                    />
+                </>
             )}
             
             <header className={`drag-handle cursor-pointer flex items-center justify-between rounded-t-xl border-slate-700/50 px-4 py-2 peer ${bubble.type == "file" ? 'bg-slate-850' : isHuman ? 'bg-slate-850' : 'bg-blue-700'}`}>
@@ -168,34 +134,12 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
             )}
             
             {/* Bottom handle for human prompts to connect to AI responses */}
-            {isHuman && (
+            {(isHuman || isAI) && (
                 <Handle 
                     type="source" 
                     position={Position.Bottom} 
-                    isConnectable={isConnectable} 
-                    style={{ 
-                        background: '#3b82f6', 
-                        border: '2px solid #ffffff',
-                        width: '12px',
-                        height: '12px',
-                        bottom: '-6px'
-                    }}
-                />
-            )}
-            
-            {/* Right handle for AI responses to connect to human prompts */}
-            {isAI && (
-                <Handle 
-                    type="source" 
-                    position={Position.Right} 
-                    isConnectable={isConnectable} 
-                    style={{ 
-                        background: '#10b981', 
-                        border: '2px solid #ffffff',
-                        width: '12px',
-                        height: '12px',
-                        right: '-6px'
-                    }}
+                    isConnectable={isConnectable}
+                    className="invisible"
                 />
             )}
         </div>
