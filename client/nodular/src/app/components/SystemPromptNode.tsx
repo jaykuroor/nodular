@@ -1,16 +1,16 @@
 'use client';
 
 import { Handle, Position } from 'reactflow';
-import { User, GripHorizontal, X, Settings, ChevronUp, ChevronDown, Wrench } from 'lucide-react';
+import { User, GripHorizontal, X, Settings, ChevronUp, ChevronDown, Wrench, Plus } from 'lucide-react';
 import { useState } from 'react';
-import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import { LLMProvider } from '../types';
 import { ModelMenu } from './ModelMenu';
 import { ContextMenu } from './ContextMenu';
+import { ButtonHandle } from './ButtonHandle';
 
 // The data prop is passed by React Flow and contains the 'bubble' object from our board state.
 export default function SystemNode({ data }: { data: any }) {
-    const { bubble, onRemove } = data;
+    const { bubble, onRemove, onAddNode } = data;
 
     // Internal state for the component's controls
     const [prompt, setPrompt] = useState(bubble.messages[0]?.text || '');
@@ -61,6 +61,10 @@ export default function SystemNode({ data }: { data: any }) {
         <div className={nodeClasses}>
             {/* Handles are connection points for React Flow edges */}
             <Handle type="target" position={Position.Top} className="invisible" />
+            <Handle type="source" position={Position.Top} id="top" className="invisible" />
+            <Handle type="source" position={Position.Right} id="right" className="invisible" />
+            <Handle type="source" position={Position.Left} id="left" className="invisible" />
+
 
             <header className="drag-handle cursor-pointer flex items-center justify-between rounded-t-xl px-4 py-2 peer bg-slate-800/50">
                 <User size={16} className="text-blue-400" />
@@ -94,28 +98,6 @@ export default function SystemNode({ data }: { data: any }) {
                     <button onClick={() => { setShowAdvanced(!showAdvanced) }} className="flex items-center gap-2 text-xs bg-slate-900 rounded-xl px-2.5 py-2 text-slate-100 hover:text-white hover:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500">
                         <Wrench size={15} /> {showAdvanced ? 'Hide' : 'Show'} Advanced Settings
                     </button>
-                    {/* Model Selector */}
-                    {/* <div className="flex-1">
-                        
-                        <select
-                            id="model"
-                            value={model}
-                            onChange={handleModelChange}
-                            className="w-full rounded-xl bg-slate-900 hover:bg-slate-950 px-2.5 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="gpt-oss-120b">GPT OSS 120B</option>
-                            <option value="gpt-oss-20b">GPT OSS 20B</option>
-                            <option value="qwen-3-32b">Qwen 3 32B</option>
-                            <option value="llama-4-scout">Llama 4 Scout</option>
-                            <option value="kimi-k2">Kimi K2</option>
-                            <option value="llama-3.3-70b">Llama 3.3 70B</option>
-                            <option value="llama-4-maverick">Llama 4 Maverick</option>
-                            <option value="whisper-large-v3">Whisper Large v3</option>
-                            <option value="claude-v1">Claude v1</option>
-                            <option value="local-model">Local Model</option>
-                        </select>
-                    </div> */}
-
                     <ModelMenu model={model} onChange={setModel} />
 
                 </div>
@@ -149,7 +131,14 @@ export default function SystemNode({ data }: { data: any }) {
                 )}
             </div>
 
-            <Handle type="source" position={Position.Bottom} className="invisible" />
+            <ButtonHandle type="source" position={Position.Bottom} id="bottom">
+                <button
+                    onClick={() => onAddNode(bubble.id)}
+                    className="p-1 rounded-full bg-gray-300 text-gray-700 hover:bg-gray-400"
+                >
+                    <Plus size={12} />
+                </button>
+            </ButtonHandle>
         </div>
     );
 }
