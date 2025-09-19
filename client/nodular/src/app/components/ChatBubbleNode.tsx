@@ -2,7 +2,7 @@
 
 import { Handle, Position, useNodeId } from 'reactflow';
 import { ChatBubbleType } from '../types';
-import { MoreHorizontal, MessageSquare, Maximize2, Minimize2, GripHorizontal, X, CloudUpload, GitBranch } from 'lucide-react';
+import { MoreHorizontal, MessageSquare, MessageSquareMore, Maximize2, Minimize2, GripHorizontal, X, CloudUpload, GitBranch } from 'lucide-react';
 import MessageNode from './MessageNode';
 import FileNode from './FileNode';
 import { useCallback } from 'react';
@@ -12,6 +12,7 @@ interface ChatBubbleNodeProps {
       bubble: ChatBubbleType;
       onRemove: (id: string) => void;
       onToggleShrink: (id: string) => void;
+      onAddNode: (id: string) => void;
       isConnecting: boolean;
       connectingNode: any;
     };
@@ -19,7 +20,7 @@ interface ChatBubbleNodeProps {
 }
 
 export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodeProps) {
-    const { bubble, onRemove, onToggleShrink, isConnecting, connectingNode } = data;
+    const { bubble, onRemove, onToggleShrink, onAddNode, isConnecting, connectingNode } = data;
     const nodeId = useNodeId()!;
     
     const isHuman = bubble.messages[0]?.sender === 'human';
@@ -35,6 +36,10 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
     const handleToggleShrink = useCallback(() => {
         onToggleShrink(nodeId);
     }, [nodeId, onToggleShrink]);
+
+    const handleAddNode = useCallback(() => {
+        onAddNode(bubble.id);
+    }, [bubble.id, onAddNode]);
 
     return (
         <div className={`${isAI ? `response-node` : `glass-pane`} flex flex-col shadow-2xl group z-20 rounded-xl ${bgColor} ${bubble.type === 'file' && !bubble.isShrunk ? 'max-w-210' : 'w-80vh'} ${isFileConnecting && isHuman ? 'prompt-connectable' : ''}`}>
@@ -65,14 +70,14 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
                     <Handle 
                         type="target" 
                         position={Position.Left} 
-                        id="file-left"
+                        id="prompt-left"
                         isConnectable={isConnectable}
                         className="invisible"
                     />
                     <Handle 
                         type="target" 
                         position={Position.Right} 
-                        id="file-right"
+                        id="prompt-right"
                         isConnectable={isConnectable}
                         className="invisible"
                     />
@@ -80,7 +85,7 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
             )}
             
             <header className={`drag-handle cursor-pointer flex items-center justify-between rounded-t-xl px-4 py-2 peer ${bubble.type == "file" ? 'bg-slate-850' : isHuman ? 'bg-slate-850' : 'bg-blue-700'}`}>
-                {bubble.file ? <CloudUpload size={16} /> : <MessageSquare size={16} className="text-blue-400" />}
+                {bubble.type === "message" ? bubble.messages[0].sender === "ai" ? <MessageSquare size={16} className="text-slate-100" /> : <MessageSquareMore size={16} className="text-blue-100" /> : <CloudUpload size={16} />}
                 <div className="flex items-center gap-2 truncate">
                     <GripHorizontal size={16} className='opacity-40' />
                     <h3 className="text-sm font-semibold text-white truncate" title={bubble.title}>{bubble.type == "file" ? "File" : (isHuman ? "You" : "Assistant")}</h3>
@@ -104,7 +109,7 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
                         <MessageNode
                             key={msg.id}
                             message={msg}
-                            onAddNode={() => {}}
+                            onAddNode={handleAddNode}
                             viewMode={"zoomed-out"}
                             isLastMessage={index === bubble.messages.length - 1}
                         />
