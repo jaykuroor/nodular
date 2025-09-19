@@ -50,6 +50,10 @@ export default function SystemNode({ data }: { data: any }) {
         onRemove(bubble.id);
     };
 
+    const handleWheel = (e: React.WheelEvent<HTMLTextAreaElement>) => {
+        e.stopPropagation();
+    };
+
     const nodeClasses = `glass-pane flex flex-col shadow-2xl group z-20 rounded-xl w-80vw ${isFocused && `nodrag`}`;
 
 
@@ -79,7 +83,8 @@ export default function SystemNode({ data }: { data: any }) {
                         onChange={handlePromptChange}
                         onFocus={() => setIsFocused(true)}
                         onBlur={() => setIsFocused(false)}
-                        className="w-full h-32 rounded-md border border-slate-700 bg-slate-900/70 p-2 text-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                        onWheel={handleWheel}
+                        className="w-full h-32 rounded-md border border-slate-700 bg-slate-900/70 p-2 text-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                         placeholder="e.g., You are a helpful assistant for writing code..."
                     />
                 </div>
@@ -117,7 +122,7 @@ export default function SystemNode({ data }: { data: any }) {
 
                 {/* Advanced Settings */}
                 {showAdvanced && (
-                    <div className="flex gap-4 px-4 py-8 items-start inset-shadow-sm inset-shadow-slate-950/80 rounded-lg">
+                    <div className="flex gap-4 px-4 py-8 items-start shadow-xl inset-shadow-xs inset-shadow-slate-700/80 bg-slate-700/10 rounded-lg">
                         {/* Temperature Control */}
                         <div className="flex flex-col items-center gap-2">
                             <label htmlFor="temperature" className="text-xs font-medium text-slate-300">Temperature</label>
