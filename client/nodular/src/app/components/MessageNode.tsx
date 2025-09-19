@@ -3,7 +3,7 @@ import { Plus, GitBranch, Repeat, Info } from 'lucide-react';
 
 interface MessageNodeProps {
     message: Message;
-    onAddNode: (messageId: string) => void;
+    onAddNode: () => void;
     viewMode: ViewMode;
     isLastMessage: boolean;
 }
@@ -38,7 +38,7 @@ export default function MessageNode({ message, onAddNode, viewMode, isLastMessag
         if (isLastMessage) return null;
         return (
             <div className="flex justify-center pt-2">
-                <button onClick={() => onAddNode(message.id)} className="flex items-center gap-2 text-sm bg-black/20 rounded-xl px-2.5 py-2 text-slate-100 hover:text-white hover:bg-black/30">
+                <button onClick={onAddNode} className="flex items-center gap-2 text-sm bg-black/20 rounded-xl px-2.5 py-2 text-slate-100 hover:text-white hover:bg-black/30">
                     <GitBranch size={15} /> Create Node
                 </button>
             </div>
