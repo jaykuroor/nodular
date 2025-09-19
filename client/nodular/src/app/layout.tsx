@@ -1,13 +1,21 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Ubuntu, Work_Sans } from "next/font/google";
 import "./globals.css";
 
 // Use the Inter font for a modern, clean look
-const inter = Inter({ subsets: ["latin"] });
+const ubuntu = Ubuntu({
+  subsets: ["latin"],
+  weight: ['300', '400', '500', '700']
+});
+
+const workSans = Work_Sans({
+  subsets: ["latin"],
+  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900']
+});
 
 export const metadata: Metadata = {
-  title: "Cognoscent - AI Chat Board",
-  description: "A multi-threaded AI chat application",
+  title: "Nodular",
+  description: "Explore realities with AI",
 };
 
 export default function RootLayout({
@@ -17,7 +25,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={ubuntu.className}>{children}</body>
     </html>
   );
 }
