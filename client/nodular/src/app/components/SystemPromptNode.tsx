@@ -1,6 +1,6 @@
 'use client';
 
-import { Handle, Position } from 'reactflow';
+import { Handle, Position } from '@xyflow/react';
 import { User, GripHorizontal, X, Settings, ChevronUp, ChevronDown, Wrench, Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { LLMProvider } from '../types';
@@ -9,7 +9,7 @@ import { ContextMenu } from './ContextMenu';
 import { ButtonHandle } from './ButtonHandle';
 
 export default function SystemNode({ data }: { data: any }) {
-    const { bubble, onRemove, onAddNode, onUpdateSystemNode } = data;
+    const { bubble, onRemove, onAddNode, onUpdateSystemNode, isConnectable } = data;
 
     const [prompt, setPrompt] = useState(bubble.messages[0]?.text || '');
     const [temperature, setTemperature] = useState(bubble.temperature || 0.7);
@@ -49,9 +49,10 @@ export default function SystemNode({ data }: { data: any }) {
 
     return (
         <div className={nodeClasses}>
-            <Handle type="source" position={Position.Top} id="top" className="invisible" />
-            <Handle type="source" position={Position.Right} id="right" className="invisible" />
-            <Handle type="source" position={Position.Left} id="left" className="invisible" />
+            <Handle type="source" position={Position.Top} id= {bubble.id + "-top"} className="!invisible" isConnectable={isConnectable} />
+            <Handle type="source" position={Position.Right} id= {bubble.id + "-top"} className="!invisible" isConnectable={isConnectable} />
+            <Handle type="source" position={Position.Left} id= {bubble.id + "-top"} className="!invisible" isConnectable={isConnectable} />
+            <Handle type="source" position={Position.Bottom} id= {bubble.id + "-top"} className="!invisible hidden" isConnectable={isConnectable} />
 
 
             <header className="drag-handle cursor-pointer flex items-center justify-between rounded-t-xl px-4 py-2 peer bg-slate-800/50">
@@ -114,7 +115,7 @@ export default function SystemNode({ data }: { data: any }) {
                 )}
             </div>
 
-            <ButtonHandle type="source" position={Position.Bottom} id="bottom">
+            <ButtonHandle type="source" position={Position.Bottom} id= {bubble.id + "-bottom-button"}>
                 <button
                     onClick={() => onAddNode(bubble.id)}
                     className="p-1 rounded-full bg-gray-300 text-gray-700 hover:bg-gray-400"
