@@ -82,19 +82,21 @@ const nodeTypes = {
 
 const getClosestConnectionPoint = (sourceNode: Node, targetNode: Node) => {
   const sourceNodeType = sourceNode.data.bubble.type;
+  const targetNodeType = targetNode.data.bubble.type;
 
-  const sourceHandlesMap: { [key: string]: string[] } = {
+  const sourceHandlesMap: { [key: string]: (Position | string)[] } = {
     file: [Position.Top, Position.Right, Position.Bottom, Position.Left],
+    system: [Position.Top, Position.Right, Position.Bottom, Position.Left],
+    message: [Position.Bottom],
+  };
+
+  const targetHandlesMap: { [key: string]: (Position | string)[] } = {
+    message: ['top', 'file-left', 'file-right'],
     system: [Position.Top, Position.Right, Position.Bottom, Position.Left],
   };
 
-  const targetHandlesMap: { [key: string]: string[] } = {
-    file: ['file-left', 'file-right'],
-    system: [Position.Top],
-  };
-
   const sourceHandles = sourceHandlesMap[sourceNodeType] || [Position.Bottom];
-  const targetHandles = targetHandlesMap[sourceNodeType] || [Position.Top];
+  const targetHandles = targetHandlesMap[targetNodeType] || [Position.Top];
 
 
   let minDistance = Infinity;
@@ -106,7 +108,9 @@ const getClosestConnectionPoint = (sourceNode: Node, targetNode: Node) => {
     const height = node.height || 0;
 
     switch (handle) {
-      case Position.Top: return { x: x + width / 2, y };
+      case Position.Top: 
+      case 'top':
+        return { x: x + width / 2, y };
       case Position.Right:
       case 'file-right':
         return { x: x + width, y: y + height / 2 };
@@ -120,13 +124,13 @@ const getClosestConnectionPoint = (sourceNode: Node, targetNode: Node) => {
 
   sourceHandles.forEach(sourceHandle => {
     targetHandles.forEach(targetHandle => {
-      const sourcePos = getHandlePosition(sourceNode, sourceHandle);
-      const targetPos = getHandlePosition(targetNode, targetHandle);
+      const sourcePos = getHandlePosition(sourceNode, sourceHandle as Position);
+      const targetPos = getHandlePosition(targetNode, targetHandle as Position);
       const distance = Math.sqrt(Math.pow(sourcePos.x - targetPos.x, 2) + Math.pow(sourcePos.y - targetPos.y, 2));
 
       if (distance < minDistance) {
         minDistance = distance;
-        bestConnection = { sourceHandle, targetHandle };
+        bestConnection = { sourceHandle: sourceHandle as string, targetHandle: targetHandle as string };
       }
     });
   });
@@ -439,7 +443,7 @@ function FlowBoard() {
 
     const initialEdges = bubbles
       .filter((bubble) => bubble.parentId)
-      .map((bubble) => {
+      .map((bubble): Edge | null => {
         const parentBubble = bubbles.find(b => b.id === bubble.parentId);
         if (parentBubble?.type === 'system') { return null; }
         let edgeStyle = {};
@@ -457,11 +461,11 @@ function FlowBoard() {
           type: 'smoothstep',
           style: edgeStyle,
         };
-      }).filter(Boolean);
+      }).filter((edge): edge is Edge => edge !== null);
 
       const systemEdges = bubbles
       .filter((bubble) => bubble.parentId)
-      .map((bubble) => {
+      .map((bubble): Edge | null => {
         const parentBubble = bubbles.find(b => b.id === bubble.parentId);
         if (parentBubble?.type !== 'system') { return null; }
         const sourceNode = initialNodes.find(n => n.id === bubble.parentId);
@@ -480,11 +484,11 @@ function FlowBoard() {
           };
         }
         return null;
-      }).filter(Boolean);
+      }).filter((edge): edge is Edge => edge !== null);
 
     const fileEdges = bubbles
       .filter(bubble => bubble.connectedTo)
-      .map(bubble => {
+      .map((bubble): Edge | null => {
         const sourceNode = initialNodes.find(n => n.id === bubble.id);
         const targetNode = initialNodes.find(n => n.id === bubble.connectedTo);
 
@@ -503,10 +507,10 @@ function FlowBoard() {
           }
         }
         return null;
-      }).filter(Boolean);
+      }).filter((edge): edge is Edge => edge !== null);
 
     setNodes(initialNodes);
-    setEdges([...initialEdges, ...systemEdges, ...fileEdges] as Edge[]);
+    setEdges([...initialEdges, ...systemEdges, ...fileEdges]);
   }, [boardState.bubbles, removeNode, toggleShrink, connectingNode]);
 
   const handleSendMessage = (text: string, bubbleId: string) => {
