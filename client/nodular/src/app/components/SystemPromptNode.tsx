@@ -60,7 +60,6 @@ export default function SystemNode({ data }: { data: any }) {
     return (
         <div className={nodeClasses}>
             {/* Handles are connection points for React Flow edges */}
-            <Handle type="target" position={Position.Top} className="invisible" />
             <Handle type="source" position={Position.Top} id="top" className="invisible" />
             <Handle type="source" position={Position.Right} id="right" className="invisible" />
             <Handle type="source" position={Position.Left} id="left" className="invisible" />
