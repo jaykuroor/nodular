@@ -45,6 +45,7 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
                     position={Position.Top} 
                     isConnectable={isConnectable}
                     className="invisible"
+                    id="top-target"
                 />
             )}
             
@@ -72,6 +73,20 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
                         type="target" 
                         position={Position.Right} 
                         id="file-right"
+                        isConnectable={isConnectable}
+                        className="invisible"
+                    />
+                    <Handle 
+                        type="target" 
+                        position={Position.Top} 
+                        id="file-top"
+                        isConnectable={isConnectable}
+                        className="invisible"
+                    />
+                    <Handle 
+                        type="target" 
+                        position={Position.Bottom} 
+                        id="file-bottom"
                         isConnectable={isConnectable}
                         className="invisible"
                     />
