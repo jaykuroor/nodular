@@ -2,51 +2,41 @@
 
 import { Handle, Position } from 'reactflow';
 import { User, GripHorizontal, X, Settings, ChevronUp, ChevronDown, Wrench, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LLMProvider } from '../types';
 import { ModelMenu } from './ModelMenu';
 import { ContextMenu } from './ContextMenu';
 import { ButtonHandle } from './ButtonHandle';
 
-// The data prop is passed by React Flow and contains the 'bubble' object from our board state.
 export default function SystemNode({ data }: { data: any }) {
-    const { bubble, onRemove, onAddNode } = data;
+    const { bubble, onRemove, onAddNode, onUpdateSystemNode } = data;
 
-    // Internal state for the component's controls
     const [prompt, setPrompt] = useState(bubble.messages[0]?.text || '');
-    const [temperature, setTemperature] = useState(0.7);
-    const [model, setModel] = useState<LLMProvider>('gpt-oss-120b');
-    const [contextManagement, setContextManagement] = useState('Select a context system');
+    const [temperature, setTemperature] = useState(bubble.temperature || 0.7);
+    const [model, setModel] = useState<LLMProvider>(bubble.llm || 'gpt-oss-120b');
+    const [contextManagement, setContextManagement] = useState('TBD');
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
 
+    useEffect(() => {
+        setPrompt(bubble.messages[0]?.text || '');
+        setTemperature(bubble.temperature || 0.7);
+        setModel(bubble.llm || 'gpt-oss-120b');
+    }, [bubble]);
 
-    // #TODO: These handlers should be connected to a global state management solution (e.g., Zustand, Context)
-    // to update the central 'boardState' when the user interacts with this node.
-    const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setPrompt(e.target.value);
-        // #TODO: Update system prompt in global state
-    };
+    useEffect(() => {
+        if (onUpdateSystemNode) {
+            onUpdateSystemNode(bubble.id, prompt, temperature, model);
+        }
+    }, [prompt, temperature, model, bubble.id]);
+
 
     const handleTemperatureChange = (newTemp: number) => {
         const temp = Math.max(0, Math.min(2, newTemp));
         setTemperature(parseFloat(temp.toFixed(1)));
-        // #TODO: Update temperature in global state
-    };
-
-    const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const newModel = e.target.value as LLMProvider;
-        setModel(newModel);
-        // #TODO: Update model in global state
-    };
-
-    const handleContextChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        // #TODO: Implement context management logic
-        console.log("Context management TBD:", e.target.value);
     };
 
     const handleRemove = () => {
-        // TBD: Implement a confirmation modal before removing the system node, if desired.
         onRemove(bubble.id);
     };
 
@@ -59,7 +49,6 @@ export default function SystemNode({ data }: { data: any }) {
 
     return (
         <div className={nodeClasses}>
-            {/* Handles are connection points for React Flow edges */}
             <Handle type="source" position={Position.Top} id="top" className="invisible" />
             <Handle type="source" position={Position.Right} id="right" className="invisible" />
             <Handle type="source" position={Position.Left} id="left" className="invisible" />
@@ -79,11 +68,10 @@ export default function SystemNode({ data }: { data: any }) {
             </header>
 
             <div className="p-4 bg-slate-800/50 rounded-b-xl space-y-4">
-                {/* Prompt Text Area */}
                 <div>
                     <textarea
                         value={prompt}
-                        onChange={handlePromptChange}
+                        onChange={(e) => setPrompt(e.target.value)}
                         onFocus={() => setIsFocused(true)}
                         onBlur={() => setIsFocused(false)}
                         onWheel={handleWheel}
@@ -93,7 +81,6 @@ export default function SystemNode({ data }: { data: any }) {
                 </div>
 
                 <div className="flex justify-between items-center gap-4">
-                    {/* Advanced Settings Button */}
                     <button onClick={() => { setShowAdvanced(!showAdvanced) }} className="flex items-center gap-2 text-xs bg-slate-900 rounded-xl px-2.5 py-2 text-slate-100 hover:text-white hover:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500">
                         <Wrench size={15} /> {showAdvanced ? 'Hide' : 'Show'} Advanced Settings
                     </button>
@@ -101,10 +88,8 @@ export default function SystemNode({ data }: { data: any }) {
 
                 </div>
 
-                {/* Advanced Settings */}
                 {showAdvanced && (
                     <div className="flex gap-4 px-4 py-8 items-start shadow-xl inset-shadow-xs inset-shadow-slate-700/80 bg-slate-700/10 rounded-lg">
-                        {/* Temperature Control */}
                         <div className="flex flex-col items-center gap-2">
                             <label htmlFor="temperature" className="text-xs font-medium text-slate-300">Temperature</label>
                             <div className="flex items-center gap-1 rounded-md bg-slate-900 hover:bg-slate-950 p-1">
@@ -124,8 +109,7 @@ export default function SystemNode({ data }: { data: any }) {
                                 </div>
                             </div>
                         </div>
-                        {/* Context Management Dropdown */}
-                        <ContextMenu ctxMgmt={contextManagement} onChange={() => {}} />
+                        <ContextMenu ctxMgmt={contextManagement} onChange={setContextManagement} />
                     </div>
                 )}
             </div>
