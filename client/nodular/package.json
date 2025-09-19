@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@headlessui/react": "^2.2.8",
+    "@xyflow/react": "^12.8.5",
     "gsap": "^3.13.0",
     "lucide-react": "^0.544.0",
     "next": "15.5.3",
@@ -17,7 +18,6 @@
     "react-dom": "19.1.0",
     "react-draggable": "^4.5.0",
     "react-xarrows": "^2.0.2",
-    "reactflow": "^11.11.4",
     "tailwind": "^4.0.0"
   },
   "devDependencies": {
