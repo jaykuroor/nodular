@@ -22,10 +22,10 @@ export default function Composer({ bubbles, onSendMessage }: ComposerProps) {
   };
 
   return (
-    <div className='absolute bottom-0 w-[calc(100%-18rem)] flex justify-center bg-slate-700/10 backdrop-blur-2xl'>
-      <div className="flex-shrink-0 rounded-xl border-t border-slate-700 bg-slate-800/80 p-4 px-12 w-4xl max-w-4/5">
+    <div className='absolute bottom-0 w-[calc(100%-18rem)] flex justify-center bg-slate-700/5 backdrop-blur-xl py-4'>
+      <div className="flex-shrink-0 rounded-[48px] border-t border-slate-700 shadow-xl bg-slate-800/30 p-4 px-16 w-4xl max-w-4/5">
         <div className="mx-auto w-full">
-          <div className="glass-pane flex items-center gap-2 rounded-xl p-2">
+          <div className="glass-pane flex items-center gap-2 rounded-[48px] p-2">
             <button title="Attach File" className="p-2 text-slate-400 hover:text-white">
               <Paperclip size={20} />
             </button>
