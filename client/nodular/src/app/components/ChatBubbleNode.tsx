@@ -1,6 +1,6 @@
 'use client';
 
-import { Handle, Position, useNodeId } from 'reactflow';
+import { Handle, Position, useNodeId } from '@xyflow/react';
 import { ChatBubbleType } from '../types';
 import { MoreHorizontal, MessageSquare, MessageSquareMore, Maximize2, Minimize2, GripHorizontal, X, CloudUpload, GitBranch } from 'lucide-react';
 import MessageNode from './MessageNode';
@@ -44,45 +44,47 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
     return (
         <div className={`${isAI ? `response-node` : `glass-pane`} flex flex-col shadow-2xl group z-20 rounded-xl ${bgColor} ${bubble.type === 'file' && !bubble.isShrunk ? 'max-w-210' : 'w-80vh'} ${isFileConnecting && isHuman ? 'prompt-connectable' : ''}`}>
             {/* Top handle for AI responses and human prompts */}
-            {(isAI || isHuman) && (
+            {(isAI || (isHuman && bubble.type !== 'file')) && (
                 <Handle 
                     type="target" 
                     position={Position.Top} 
                     isConnectable={isConnectable}
-                    className="invisible"
-                    id="top"
+                    className="!bg-teal-500"
+                    id= {bubble.id + "-top"}
                 />
             )}
             
             {/* Handles for file connections */}
             {bubble.type === 'file' && (
                 <>
-                    <Handle type="source" position={Position.Top} id="top" className="invisible" isConnectable={isConnectable} />
-                    <Handle type="source" position={Position.Right} id="right" className="invisible" isConnectable={isConnectable} />
-                    <Handle type="source" position={Position.Bottom} id="bottom" className="invisible" isConnectable={isConnectable} />
-                    <Handle type="source" position={Position.Left} id="left" className="invisible" isConnectable={isConnectable} />
+                    <Handle type="source" position={Position.Top} id= {bubble.id + "-top"} className="!bg-rose-500" isConnectable={isConnectable} />
+                    <Handle type="source" position={Position.Right} id= {bubble.id + "-right"} className="!bg-rose-500" isConnectable={isConnectable} />
+                    <Handle type="source" position={Position.Bottom} id= {bubble.id + "-bottom"} className="!bg-rose-500" isConnectable={isConnectable} />
+                    <Handle type="source" position={Position.Left} id= {bubble.id + "-left"} className="!bg-rose-500" isConnectable={isConnectable} />
                 </>
             )}
             
             {/* Left and Right handles for human prompts to receive file connections */}
-            {isHuman && (
+            {bubble.type === 'message' && (
                 <>
                     <Handle 
                         type="target" 
                         position={Position.Left} 
-                        id="prompt-left"
+                        id= {bubble.id + "-left"}
                         isConnectable={isConnectable}
-                        className="invisible"
+                        className="!bg-teal-500"
                     />
                     <Handle 
                         type="target" 
                         position={Position.Right} 
-                        id="prompt-right"
+                        id= {bubble.id + "-right"}
                         isConnectable={isConnectable}
-                        className="invisible"
+                        className="!bg-teal-500"
                     />
                 </>
             )}
+
+            
             
             <header className={`drag-handle cursor-pointer flex items-center justify-between rounded-t-xl px-4 py-2 peer ${bubble.type == "file" ? 'bg-slate-850' : isHuman ? 'bg-slate-850' : 'bg-blue-700'}`}>
                 {bubble.type === "message" ? bubble.messages[0].sender === "ai" ? <MessageSquare size={16} className="text-slate-100" /> : <MessageSquareMore size={16} className="text-blue-100" /> : <CloudUpload size={16} />}
@@ -136,13 +138,6 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
                                 <div className="flex justify-center items-center gap-2 text-sm bg-black/20 rounded-xl px-2.5 py-2 text-slate-100 peer-hover:bg-black/30 transition-transform peer-hover:scale-105">
                                     <GitBranch size={15} /> Connect File
                                 </div>
-                                <Handle
-                                    type="source"
-                                    position={Position.Bottom}
-                                    id="connect-button-handle"
-                                    isConnectable={isConnectable}
-                                    className="!w-full !h-full !top-0 !left-0 !transform-none !border-none !bg-transparent !cursor-pointer peer"
-                                />
                             </div>
                         </>
                     )}
@@ -152,10 +147,11 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
             {/* Bottom handle for human prompts to connect to AI responses */}
             {(isHuman || isAI) && (
                 <Handle 
-                    type="source" 
+                    type="source"
+                    id= {bubble.id + "-bottom"} 
                     position={Position.Bottom} 
                     isConnectable={isConnectable}
-                    className="invisible"
+                    className="!invisible"
                 />
             )}
         </div>

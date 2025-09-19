@@ -1,4 +1,4 @@
-import { Handle, HandleProps } from 'reactflow';
+import { Handle, HandleProps } from '@xyflow/react';
 
 export function ButtonHandle(props: HandleProps & { children: React.ReactNode }) {
     return (
