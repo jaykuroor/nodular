@@ -42,6 +42,8 @@ const initialBoard: BoardState = {
       messages: [{ id: 'msg-0-1', text: 'You are a helpful assistant specializing in frontend development.', sender: 'human', timestamp: '4:00 PM' }],
       isShrunk: false,
       type: 'system',
+      llm: 'gpt-oss-120b',
+      temperature: 0.7,
     },
     {
       id: 'bubble-1',
@@ -92,7 +94,6 @@ const getClosestConnectionPoint = (sourceNode: Node, targetNode: Node) => {
 
   const targetHandlesMap: { [key: string]: (Position | string)[] } = {
     message: ['top', 'file-left', 'file-right'],
-    system: [Position.Top, Position.Right, Position.Bottom, Position.Left],
   };
 
   const sourceHandles = sourceHandlesMap[sourceNodeType] || [Position.Bottom];
@@ -108,7 +109,7 @@ const getClosestConnectionPoint = (sourceNode: Node, targetNode: Node) => {
     const height = node.height || 0;
 
     switch (handle) {
-      case Position.Top: 
+      case Position.Top:
       case 'top':
         return { x: x + width / 2, y };
       case Position.Right:
@@ -359,57 +360,45 @@ function FlowBoard() {
   };
 
   const addNode = useCallback((parentNodeId: string) => {
-    const parentNode = nodes.find((n) => n.id === parentNodeId);
-    if (!parentNode) return;
-
-    const newPosition = {
-        x: parentNode.position.x,
-        y: parentNode.position.y + (parentNode.height || 0) + 100,
-    };
-
-    const newBubble: ChatBubbleType = {
-      id: `bubble-${Date.now()}`,
-      title: 'New Prompt',
-      messages: [{
-        id: `msg-${Date.now()}`,
-        text: 'New prompt...',
-        sender: 'human',
-        timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric' }),
-      }],
-      position: newPosition,
-      isShrunk: false,
-      type: 'message',
-      parentId: parentNode.id,
-    };
-
-    setBoardState(prev => ({
-      ...prev,
-      bubbles: [...prev.bubbles, newBubble]
-    }));
-
-  }, [nodes, setBoardState]);
+    setBoardState(prev => {
+      const parentNode = prev.bubbles.find(b => b.id === parentNodeId);
+      if (!parentNode) return prev;
+  
+      const parentNodePosition = parentNode.position;
+      const parentNodeHeight = 100; // Estimate or get from rendered node
+  
+      const newPosition = {
+        x: parentNodePosition.x,
+        y: parentNodePosition.y + parentNodeHeight + 100,
+      };
+  
+      const newBubble: ChatBubbleType = {
+        id: `bubble-${Date.now()}`,
+        title: 'New Prompt',
+        messages: [{
+          id: `msg-${Date.now()}`,
+          text: 'New prompt...',
+          sender: 'human',
+          timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric' }),
+        }],
+        position: newPosition,
+        isShrunk: false,
+        type: 'message',
+        parentId: parentNode.id,
+      };
+  
+      return { ...prev, bubbles: [...prev.bubbles, newBubble] };
+    });
+  }, [setBoardState]);
 
   const removeNode = useCallback((nodeId: string) => {
-    setNodes((nds) => nds.filter((node) => node.id !== nodeId));
-    setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
-
     setBoardState(prev => ({
       ...prev,
       bubbles: prev.bubbles.filter(bubble => bubble.id !== nodeId)
     }));
-  }, [setNodes, setEdges, setBoardState]);
+  }, [setBoardState]);
 
   const toggleShrink = useCallback((nodeId: string) => {
-    setNodes((nds) =>
-      nds.map((node) => {
-        if (node.id === nodeId) {
-          const newBubble = { ...node.data.bubble, isShrunk: !node.data.bubble.isShrunk };
-          return { ...node, data: { ...node.data, bubble: newBubble } };
-        }
-        return node;
-      })
-    );
-
     setBoardState(prev => ({
       ...prev,
       bubbles: prev.bubbles.map(bubble => {
@@ -419,7 +408,25 @@ function FlowBoard() {
         return bubble;
       })
     }));
-  }, [setNodes, setBoardState]);
+  }, [setBoardState]);
+
+  const updateSystemNode = useCallback((nodeId: string, prompt: string, temperature: number, llm: LLMProvider) => {
+      setBoardState(prev => ({
+          ...prev,
+          bubbles: prev.bubbles.map(bubble => {
+              if (bubble.id === nodeId && bubble.type === 'system') {
+                  return {
+                      ...bubble,
+                      messages: [{ ...bubble.messages[0], text: prompt }],
+                      temperature,
+                      llm,
+                  };
+              }
+              return bubble;
+          })
+      }));
+  }, [setBoardState]);
+
 
   const edgeTypes = {
     buttonedge: (props: any) => <ButtonEdge {...props} data={{ ...props.data, onEdgeClick }} />,
@@ -437,7 +444,15 @@ function FlowBoard() {
         id: bubble.id,
         type: nodeType,
         position: bubble.position,
-        data: { bubble, onRemove: removeNode, onToggleShrink: toggleShrink, onAddNode: addNode, isConnecting: !!connectingNode, connectingNode },
+        data: {
+            bubble,
+            onRemove: removeNode,
+            onToggleShrink: toggleShrink,
+            onAddNode: addNode,
+            isConnecting: !!connectingNode,
+            connectingNode,
+            onUpdateSystemNode: updateSystemNode
+        },
       };
     });
 
@@ -477,8 +492,8 @@ function FlowBoard() {
             id: `e-${bubble.parentId}-${bubble.id}`,
             source: bubble.parentId!,
             target: bubble.id,
-            sourceHandle,
-            targetHandle,
+            sourceHandle: sourceHandle,
+            targetHandle: targetHandle,
             type: 'smoothstep',
             style: { stroke: '#ffffff', strokeWidth: 2 },
           };
@@ -498,8 +513,8 @@ function FlowBoard() {
             id: `e-${bubble.id}-${bubble.connectedTo}`,
             source: bubble.id,
             target: bubble.connectedTo!,
-            sourceHandle,
-            targetHandle,
+            sourceHandle: sourceHandle,
+            targetHandle: targetHandle,
             type: 'buttonedge',
             style: { stroke: '#3b82f6', strokeWidth: 2 },
             animated: true,
@@ -511,7 +526,7 @@ function FlowBoard() {
 
     setNodes(initialNodes);
     setEdges([...initialEdges, ...systemEdges, ...fileEdges]);
-  }, [boardState.bubbles, removeNode, toggleShrink, connectingNode]);
+  }, [boardState.bubbles, removeNode, toggleShrink, connectingNode, addNode, updateSystemNode]);
 
   const handleSendMessage = (text: string, bubbleId: string) => {
     const parentNode = nodes.find((n) => n.id === bubbleId) || nodes[nodes.length - 1];
