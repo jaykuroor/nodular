@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import ReactFlow, {
+import {
+  ReactFlow,
   Controls,
   Background,
   applyNodeChanges,
@@ -18,7 +19,10 @@ import ReactFlow, {
   NodeChange,
   OnConnectStartParams,
   Position,
-} from 'reactflow';
+  Handle,
+} from '@xyflow/react';
+
+import type { NodeHandle } from '@xyflow/system';
 
 import { BoardState, Message, ChatBubbleType, LLMProvider, ViewMode } from '../types';
 import Sidebar from './Sidebar';
@@ -82,56 +86,107 @@ const nodeTypes = {
   system: SystemNode,
 };
 
-const getClosestConnectionPoint = (sourceNode: Node, targetNode: Node) => {
-  const sourceNodeType = sourceNode.data.bubble.type;
-  const targetNodeType = targetNode.data.bubble.type;
+const getClosestConnectionPoint = (sourceNode: Node<{bubble: ChatBubbleType}>, targetNode: Node<{bubble: ChatBubbleType}>) => {
+  const sourceBubble = sourceNode.data.bubble;
+  const targetBubble = targetNode.data.bubble;
 
-  const sourceHandlesMap: { [key: string]: (Position | string)[] } = {
-    file: [Position.Top, Position.Right, Position.Bottom, Position.Left],
-    system: [Position.Top, Position.Right, Position.Bottom, Position.Left],
-    message: [Position.Bottom],
-  };
+  let sourceHandles: (Position)[] = [Position.Bottom];
 
-  const targetHandlesMap: { [key: string]: (Position | string)[] } = {
-    message: ['top', 'file-left', 'file-right'],
-  };
+  let targetHandles: (Position)[] = [Position.Top];
+  // File Node
+  if (sourceBubble.type === 'file') {
 
-  const sourceHandles = sourceHandlesMap[sourceNodeType] || [Position.Bottom];
-  const targetHandles = targetHandlesMap[targetNodeType] || [Position.Top];
+    sourceHandles = [Position.Top, Position.Right, Position.Bottom, Position.Left];
+
+  }
+  // System Prompt Node
+  else if (sourceBubble.type === 'system') {
+    sourceHandles = [Position.Top, Position.Right, Position.Bottom, Position.Left];
+    targetHandles = [Position.Top, Position.Right, Position.Left];
+
+  }
+  // Prompt Node (Human)
+  else if (targetBubble.type === 'message' && targetBubble.messages[0]?.sender === 'human') {
+    sourceHandles = [Position.Top, Position.Right, Position.Bottom, Position.Left];
+    targetHandles = [Position.Top, Position.Right, Position.Left];
+  }
+  // Response Node (AI)
+  else if (targetBubble.type === 'message' && targetBubble.messages[0]?.sender === 'ai') {
+    sourceHandles = [Position.Bottom];
+    targetHandles = [Position.Left, Position.Right];
+  }
 
 
   let minDistance = Infinity;
-  let bestConnection = { sourceHandle: sourceHandles[0], targetHandle: targetHandles[0] };
+  let bestConnection = { sourceHandle: sourceBubble.id + '-top', targetHandle: targetBubble.id + '-top' };
 
-  const getHandlePosition = (node: Node, handle: Position | string) => {
-    const { x, y } = node.position;
-    const width = node.width || 0;
-    const height = node.height || 0;
+  const getHandlePosition = (node: Node<{bubble: ChatBubbleType}>, handle: Position) => {
+      const { x, y } = node.position;
+  
+      const width = node.data.bubble.type === 'file' ? 160 : (node.width || 240);
+      const height = node.height || 0;
 
     switch (handle) {
       case Position.Top:
-      case 'top':
         return { x: x + width / 2, y };
       case Position.Right:
-      case 'file-right':
         return { x: x + width, y: y + height / 2 };
-      case Position.Bottom: return { x: x + width / 2, y: y + height };
+      case Position.Bottom:
+        return { x: x + width / 2, y: y + height };
       case Position.Left:
-      case 'file-left':
         return { x, y: y + height / 2 };
       default: return { x, y };
     }
   };
 
+  const getHandleCoords = (handle: NodeHandle) => {
+    return {x: handle.x, y: handle.y}
+  };
+
+  const getHandleId = (node: Node<{bubble: ChatBubbleType}>, handle: Position) => {
+    const id = node.data.bubble.id;
+    switch (handle) {
+      case Position.Top:
+        return id + '-top';
+      case Position.Right:
+        return id + '-right';
+      case Position.Bottom:
+        return id + '-bottom';
+      case Position.Left:
+        return id + '-left';
+      default:
+        return id + '-top';
+    }
+  };
+
+  // Connection Types
+
+
+
+  // 2. Response Node -> Prompt Node
+  if (sourceBubble.type === 'message' && sourceBubble.messages[0]?.sender === 'ai' && targetBubble.type === 'message' && targetBubble.messages[0]?.sender === 'human') {
+    return { sourceHandle: getHandleId(sourceNode, Position.Bottom), targetHandle: getHandleId(targetNode, Position.Top) };
+  }
+
+  // 3. File Node -> Prompt Node
   sourceHandles.forEach(sourceHandle => {
+    console.log('Evaluating source handle: ' + getHandleId(sourceNode, sourceHandle));
     targetHandles.forEach(targetHandle => {
       const sourcePos = getHandlePosition(sourceNode, sourceHandle as Position);
       const targetPos = getHandlePosition(targetNode, targetHandle as Position);
       const distance = Math.sqrt(Math.pow(sourcePos.x - targetPos.x, 2) + Math.pow(sourcePos.y - targetPos.y, 2));
+      if (sourceBubble.type === 'message' && sourceBubble.messages[0]?.sender === 'human') {
+        console.log('Evaluating connection to ' + getHandleId(targetNode, targetHandle as Position) + ': ' + distance)
+        console.log('target_position: { ' + targetPos.x + ', ' + targetPos.y) + ' }';
+      }
 
       if (distance < minDistance) {
         minDistance = distance;
-        bestConnection = { sourceHandle: sourceHandle as string, targetHandle: targetHandle as string };
+        bestConnection = {
+          sourceHandle: getHandleId(sourceNode, sourceHandle),
+          targetHandle: getHandleId(targetNode, targetHandle),
+        };
+        console.log('Best connection updated:', bestConnection);
       }
     });
   });
@@ -142,7 +197,7 @@ const getClosestConnectionPoint = (sourceNode: Node, targetNode: Node) => {
 
 function FlowBoard() {
   const [boardState, setBoardState] = useState<BoardState>(initialBoard);
-  const [nodes, setNodes] = useState<Node[]>([]);
+  const [nodes, setNodes] = useState<Node<{bubble: ChatBubbleType}>[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [selectedLLM, setSelectedLLM] = useState<LLMProvider>('gpt-oss-120b');
   const [showGuide, setShowGuide] = useState(true);
@@ -152,11 +207,11 @@ function FlowBoard() {
   const [isDisconnectModalOpen, setDisconnectModalOpen] = useState(false);
   const [edgeToDisconnect, setEdgeToDisconnect] = useState<Edge | null>(null);
   const [connectingNode, setConnectingNode] = useState<any>(null);
-  const [targetNode, setTargetNode] = useState<Node | null>(null);
+  const [targetNode, setTargetNode] = useState<Node<{ bubble: ChatBubbleType }> | null>(null);
 
   const onNodesChange: OnNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      setNodes((nds) => applyNodeChanges(changes, nds));
+      setNodes((nds) => applyNodeChanges<{ bubble: ChatBubbleType }>(changes, nds));
     },
     [setNodes]
   );
@@ -195,16 +250,16 @@ function FlowBoard() {
     const sourceNode = nodes.find((n) => n.id === connectingNode?.id);
 
     if (sourceNode && targetNode) {
-        if (isValidConnection({ source: sourceNode.id, target: targetNode.id, sourceHandle: null, targetHandle: null })) {
-            const { sourceHandle, targetHandle } = getClosestConnectionPoint(sourceNode, targetNode);
-            const newConnection: Connection = {
-              source: connectingNode.id,
-              target: targetNode.id,
-              sourceHandle,
-              targetHandle,
-            };
-            onConnect(newConnection);
-        }
+      if (isValidConnection({ source: sourceNode.id, target: targetNode.id, sourceHandle: null, targetHandle: null })) {
+        const { sourceHandle, targetHandle } = getClosestConnectionPoint(sourceNode, targetNode);
+        const newConnection: Connection = {
+          source: connectingNode.id,
+          target: targetNode.id,
+          sourceHandle,
+          targetHandle,
+        };
+        onConnect(newConnection);
+      }
     }
 
     if (connectingNode?.type === 'file') {
@@ -216,44 +271,43 @@ function FlowBoard() {
     setTargetNode(null);
   };
 
-  const isValidConnection = (connection: Connection) => {
-    const sourceNode = nodes.find(node => node.id === connection.source);
-    const targetNode = nodes.find(node => node.id === connection.target);
+  const isValidConnection = (params: Edge | Connection) => {
+    if (!params.source || !params.target) return false;
+    
+    const sourceNode = nodes.find(node => node.id === params.source);
+    const targetNode = nodes.find(node => node.id === params.target);
 
     if (!sourceNode || !targetNode) return false;
 
+    const sourceBubble = sourceNode.data.bubble;
+    const targetBubble = targetNode.data.bubble;
+
     const connectionExists = edges.some(
       (edge) =>
-        (edge.source === connection.source && edge.target === connection.target) ||
-        (edge.source === connection.target && edge.target === connection.source)
+        (edge.source === params.source && edge.target === params.target) ||
+        (edge.source === params.target && edge.target === params.source)
     );
 
     if (connectionExists) return false;
 
-    // Files can only connect to human (prompt) nodes
-    if (sourceNode.data.bubble.type === 'file') {
-      return targetNode.data.bubble.type === 'message' &&
-        targetNode.data.bubble.messages[0]?.sender === 'human';
+    // File node -> Prompt Node
+    if (sourceBubble.type === 'file' && targetBubble.type === 'message' && targetBubble.messages[0]?.sender === 'human') {
+      return true;
     }
 
-    // Human nodes can connect to AI nodes
-    if (sourceNode.data.bubble.type === 'message' &&
-      sourceNode.data.bubble.messages[0]?.sender === 'human') {
-      return targetNode.data.bubble.type === 'message' &&
-        targetNode.data.bubble.messages[0]?.sender === 'ai';
+    // System Prompt Node -> Prompt Node
+    if (sourceBubble.type === 'system' && targetBubble.type === 'message' && targetBubble.messages[0]?.sender === 'human') {
+      return true;
     }
 
-    // AI nodes can connect to human nodes
-    if (sourceNode.data.bubble.type === 'message' &&
-      sourceNode.data.bubble.messages[0]?.sender === 'ai') {
-      return targetNode.data.bubble.type === 'message' &&
-        targetNode.data.bubble.messages[0]?.sender === 'human';
+    // Prompt Node -> Response Node
+    if (sourceBubble.type === 'message' && sourceBubble.messages[0]?.sender === 'human' && targetBubble.type === 'message' && targetBubble.messages[0]?.sender === 'ai') {
+      return true;
     }
 
-    // System node can connect to human nodes
-    if (sourceNode.data.bubble.type === 'system') {
-      return targetNode.data.bubble.type === 'message' &&
-        targetNode.data.bubble.messages[0]?.sender === 'human';
+    // Response Node -> Prompt Node
+    if (sourceBubble.type === 'message' && sourceBubble.messages[0]?.sender === 'ai' && targetBubble.type === 'message' && targetBubble.messages[0]?.sender === 'human') {
+      return true;
     }
 
     return false;
@@ -363,15 +417,15 @@ function FlowBoard() {
     setBoardState(prev => {
       const parentNode = prev.bubbles.find(b => b.id === parentNodeId);
       if (!parentNode) return prev;
-  
+
       const parentNodePosition = parentNode.position;
       const parentNodeHeight = 100; // Estimate or get from rendered node
-  
+
       const newPosition = {
         x: parentNodePosition.x,
         y: parentNodePosition.y + parentNodeHeight + 100,
       };
-  
+
       const newBubble: ChatBubbleType = {
         id: `bubble-${Date.now()}`,
         title: 'New Prompt',
@@ -386,7 +440,7 @@ function FlowBoard() {
         type: 'message',
         parentId: parentNode.id,
       };
-  
+
       return { ...prev, bubbles: [...prev.bubbles, newBubble] };
     });
   }, [setBoardState]);
@@ -411,20 +465,20 @@ function FlowBoard() {
   }, [setBoardState]);
 
   const updateSystemNode = useCallback((nodeId: string, prompt: string, temperature: number, llm: LLMProvider) => {
-      setBoardState(prev => ({
-          ...prev,
-          bubbles: prev.bubbles.map(bubble => {
-              if (bubble.id === nodeId && bubble.type === 'system') {
-                  return {
-                      ...bubble,
-                      messages: [{ ...bubble.messages[0], text: prompt }],
-                      temperature,
-                      llm,
-                  };
-              }
-              return bubble;
-          })
-      }));
+    setBoardState(prev => ({
+      ...prev,
+      bubbles: prev.bubbles.map(bubble => {
+        if (bubble.id === nodeId && bubble.type === 'system') {
+          return {
+            ...bubble,
+            messages: [{ ...bubble.messages[0], text: prompt }],
+            temperature,
+            llm,
+          };
+        }
+        return bubble;
+      })
+    }));
   }, [setBoardState]);
 
 
@@ -445,14 +499,15 @@ function FlowBoard() {
         type: nodeType,
         position: bubble.position,
         data: {
-            bubble,
-            onRemove: removeNode,
-            onToggleShrink: toggleShrink,
-            onAddNode: addNode,
-            isConnecting: !!connectingNode,
-            connectingNode,
-            onUpdateSystemNode: updateSystemNode
+          bubble,
+          onRemove: removeNode,
+          onToggleShrink: toggleShrink,
+          onAddNode: addNode,
+          isConnecting: !!connectingNode,
+          connectingNode,
+          onUpdateSystemNode: updateSystemNode
         },
+        handles: []
       };
     });
 
@@ -462,6 +517,10 @@ function FlowBoard() {
         const parentBubble = bubbles.find(b => b.id === bubble.parentId);
         if (parentBubble?.type === 'system') { return null; }
         let edgeStyle = {};
+        const { sourceHandle, targetHandle } = getClosestConnectionPoint(
+          initialNodes.find(n => n.id === bubble.parentId)!,
+          initialNodes.find(n => n.id === bubble.id)!
+        );
 
         if (parentBubble?.messages[0]?.sender === 'human') {
           edgeStyle = { stroke: '#3b82f6', strokeWidth: 2 };
@@ -473,12 +532,14 @@ function FlowBoard() {
           id: `e-${bubble.parentId}-${bubble.id}`,
           source: bubble.parentId!,
           target: bubble.id,
+          sourceHandle: sourceHandle,
+          targetHandle: targetHandle,
           type: 'smoothstep',
           style: edgeStyle,
         };
       }).filter((edge): edge is Edge => edge !== null);
 
-      const systemEdges = bubbles
+    const systemEdges = bubbles
       .filter((bubble) => bubble.parentId)
       .map((bubble): Edge | null => {
         const parentBubble = bubbles.find(b => b.id === bubble.parentId);
@@ -561,7 +622,7 @@ function FlowBoard() {
     if (files.length === 0 || !reactFlowWrapper.current) return;
 
     const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
-    const position = reactFlowInstance.project({
+    const position = reactFlowInstance.screenToFlowPosition({
       x: e.clientX - reactFlowBounds.left,
       y: e.clientY - reactFlowBounds.top,
     });
@@ -629,10 +690,10 @@ function FlowBoard() {
             onNodeDragStop={onNodeDragStop}
             onConnectStart={onConnectStart}
             onConnectEnd={onConnectEnd}
-            onNodeMouseEnter={(_, node) => setTargetNode(node)}
+            onNodeMouseEnter={(_: React.MouseEvent, node: Node<any>) => setTargetNode(node as Node<{ bubble: ChatBubbleType }>)}
             onNodeMouseLeave={() => setTargetNode(null)}
             fitView
-            panOnDrag={!nodes.some(node => node.data.isFocused)}
+            panOnDrag={!nodes.some(n => n.selected)}
             proOptions={proOptions}
           >
             <Watermark />
