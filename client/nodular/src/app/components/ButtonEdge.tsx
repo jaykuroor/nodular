@@ -5,7 +5,7 @@ import {
   getSmoothStepPath,
   useReactFlow,
   type EdgeProps,
-} from 'reactflow';
+} from '@xyflow/react';
 import { X } from 'lucide-react';
 
 export default function ButtonEdge({
