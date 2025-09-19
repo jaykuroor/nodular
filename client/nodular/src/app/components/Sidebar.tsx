@@ -38,7 +38,7 @@ export default function Sidebar({ boards, onSelectBoard, selectedLLM, onSelectLL
     return (
         <aside className="flex h-screen w-72 flex-col bg-slate-800 p-4 shadow-2xl">
             {/* Logo */}
-            <div className="mb-4 scale-80">
+            <div className="mb-4 -translate-x-4 scale-80">
                 <a href="/" title="Home">
                     <img
                         src="/logo.png"
