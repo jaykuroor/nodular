@@ -31,6 +31,8 @@ export interface ChatBubbleType {
   connectedTo?: string; // For file nodes, the ID of the prompt node they're connected to
   file?: File;
   fileUrl?: string;
+  llm?: LLMProvider;
+  temperature?: number;
 }
 
 export interface BoardState {
