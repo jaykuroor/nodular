@@ -19,7 +19,7 @@ export function ContextMenu({
     className = '',
 }: {
     ctxMgmt: string;
-    onChange: () => void; // 👈 change here
+    onChange: (value: string) => void;
     className?: string;
 }) {
     const current =
@@ -43,7 +43,7 @@ export function ContextMenu({
                             {({ focus }) => (
                                 <button
                                     type="button"
-                                    onClick={() => { }} // TODO
+                                    onClick={() => onChange(opt.value)}
                                     className={[
                                         'flex w-full items-center gap-2 px-3 py-2 text-left text-sm',
                                         'text-gray-300',
