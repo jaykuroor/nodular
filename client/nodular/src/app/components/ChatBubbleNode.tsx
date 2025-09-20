@@ -5,7 +5,7 @@ import { ChatBubbleType } from '../types';
 import { MoreHorizontal, MessageSquare, MessageSquareMore, Maximize2, Minimize2, GripHorizontal, X, CloudUpload, GitBranch } from 'lucide-react';
 import MessageNode from './MessageNode';
 import FileNode from './FileNode';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 
 interface ChatBubbleNodeProps {
     data: {
@@ -23,6 +23,9 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
     const { bubble, onRemove, onToggleShrink, onAddNode, isConnecting, connectingNode } = data;
     const nodeId = useNodeId()!;
     
+    // DELETED: The useEffect that mutated bubble.handles has been removed to fix the crash.
+    // React Flow will manage handle data internally based on the <Handle> components below.
+
     const isHuman = bubble.messages[0]?.sender === 'human';
     const isAI = bubble.messages[0]?.sender === 'ai';
     const bgColor = bubble.type === 'file' ? 'bg-slate-800' : isHuman ? 'bg-slate-600' : 'bg-blue-700';

@@ -18,6 +18,9 @@ export default function SystemNode({ data }: { data: any }) {
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
 
+    // DELETED: The useEffect that mutated bubble.handles has been removed to fix the crash.
+    // React Flow will manage handle data internally based on the <Handle> components below.
+
     useEffect(() => {
         setPrompt(bubble.messages[0]?.text || '');
         setTemperature(bubble.temperature || 0.7);
@@ -28,7 +31,7 @@ export default function SystemNode({ data }: { data: any }) {
         if (onUpdateSystemNode) {
             onUpdateSystemNode(bubble.id, prompt, temperature, model);
         }
-    }, [prompt, temperature, model, bubble.id]);
+    }, [prompt, temperature, model, bubble.id, onUpdateSystemNode]);
 
 
     const handleTemperatureChange = (newTemp: number) => {
@@ -50,9 +53,9 @@ export default function SystemNode({ data }: { data: any }) {
     return (
         <div className={nodeClasses}>
             <Handle type="source" position={Position.Top} id= {bubble.id + "-top"} className="!invisible" isConnectable={isConnectable} />
-            <Handle type="source" position={Position.Right} id= {bubble.id + "-top"} className="!invisible" isConnectable={isConnectable} />
-            <Handle type="source" position={Position.Left} id= {bubble.id + "-top"} className="!invisible" isConnectable={isConnectable} />
-            <Handle type="source" position={Position.Bottom} id= {bubble.id + "-top"} className="!invisible hidden" isConnectable={isConnectable} />
+            <Handle type="source" position={Position.Right} id= {bubble.id + "-right"} className="!invisible" isConnectable={isConnectable} />
+            <Handle type="source" position={Position.Left} id= {bubble.id + "-left"} className="!invisible" isConnectable={isConnectable} />
+            <Handle type="source" position={Position.Bottom} id= {bubble.id + "-bottom"} className="!invisible hidden" isConnectable={isConnectable} />
 
 
             <header className="drag-handle cursor-pointer flex items-center justify-between rounded-t-xl px-4 py-2 peer bg-slate-800/50">
