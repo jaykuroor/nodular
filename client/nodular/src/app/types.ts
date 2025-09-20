@@ -1,3 +1,5 @@
+import { Position } from "@xyflow/react";
+
 export type LLMProvider = 
   | 'gpt-oss-120b' 
   | 'claude-v1' 
@@ -19,6 +21,9 @@ export interface Message {
 
 export type ViewMode = 'thread' | 'zoomed-out' | 'map';
 
+// Note: The custom NodeHandle type has been removed as we will rely on React Flow's internal state.
+// export interface NodeHandle { ... }
+
 export interface ChatBubbleType {
   id: string;
   title: string;
@@ -33,6 +38,7 @@ export interface ChatBubbleType {
   fileUrl?: string;
   llm?: LLMProvider;
   temperature?: number;
+  // The 'handles' property has been removed to prevent state mutation errors.
 }
 
 export interface BoardState {
