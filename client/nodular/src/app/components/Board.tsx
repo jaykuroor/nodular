@@ -91,77 +91,65 @@ const nodeTypes = {
 };
 
 const getClosestConnectionPoint = (sourceNode: Node<{ bubble: ChatBubbleType }>, targetNode: Node<{ bubble: ChatBubbleType }>) => {
-
     const sourceElement = document.getElementById(sourceNode.id);
     const targetElement = document.getElementById(targetNode.id);
-    
-    const sourceHandles: string[] = [`${sourceNode.id}-bottom`];
-    const targetHandles: string[] = [`${sourceNode.id}-top`];
+
+    let sourceHandles: string[] = [`${sourceNode.id}-bottom`];
+    let targetHandles: string[] = [`${targetNode.id}-top`];
 
     if (!sourceElement || !targetElement) {
         return { sourceHandle: sourceHandles[0], targetHandle: targetHandles[0] };
     }
-    
-    if (sourceNode.data.bubble.type === 'file'){
-      const sourceHandles: string[] = ['top', 'right', 'bottom', 'left'].map(pos => `${sourceNode.id}-${pos}`);
-    } else if (sourceNode.data.bubble.type === 'system'){
-      const sourceHandles: string[] = ['top', 'right', 'left'].map(pos => `${sourceNode.id}-${pos}`);
-      const targetHandles: string[] = ['right', 'left'].map(pos => `${targetNode.id}-${pos}`);
-    } else if (sourceNode.data.bubble.type === 'message' && sourceNode.data.bubble.messages[0]?.sender === 'human') {
-      const targetHandles: string[] = ['top', 'right', 'left'].map(pos => `${targetNode.id}-${pos}`);
-    } else if (sourceNode.data.bubble.type === 'message' && sourceNode.data.bubble.messages[0]?.sender === 'ai') {
-      const targetHandles: string[] = ['right', 'left'].map(pos => `${targetNode.id}-${pos}`);
+
+    if (sourceNode.data.bubble.type === 'file') {
+        sourceHandles = ['top', 'right', 'bottom', 'left'].map(pos => `${sourceNode.id}-${pos}`);
+    } else if (sourceNode.data.bubble.type === 'system') {
+        sourceHandles = ['right', 'top', 'left', 'bottom'].map(pos => `${sourceNode.id}-${pos}`);
+    }
+
+    if (targetNode.data.bubble.type === 'message' && targetNode.data.bubble.messages[0]?.sender === 'human') {
+        targetHandles = ['top', 'right', 'left'].map(pos => `${targetNode.id}-${pos}`);
+    } else if (targetNode.data.bubble.type === 'message' && targetNode.data.bubble.messages[0]?.sender === 'ai') {
+        targetHandles = ['right', 'left', 'top'].map(pos => `${targetNode.id}-${pos}`);
     }
 
 
     let minDistance = Infinity;
     let bestConnection = { sourceHandle: sourceHandles[0], targetHandle: targetHandles[0] };
 
-    interface Coordinates {
-      x: number;
-      y: number;
-    }
+    const getHandleCoords = (node: Node, handleId: string) => {
+        const handlePosition = handleId.split('-').pop();
+        const nodeRect = document.getElementById(node.id)?.getBoundingClientRect();
+        if (!nodeRect) return { x: node.position.x, y: node.position.y };
 
-    const getHandleDetails = (pos: Coordinates, handle: string, handleElement: Element) => {
-      if (handle.endsWith('-top')) {
-        return {
-          x: pos.x + (handleElement.getBoundingClientRect().width / 2),
-          y: pos.y + (handleElement.getBoundingClientRect().height / 2),
-        };
-      } else if (handle.endsWith('-bottom')) {
-        return {
-          x: pos.x + (handleElement.getBoundingClientRect().width / 2),
-          y: pos.y + (handleElement.getBoundingClientRect().height / 2),
-        };
-      } else if (handle.endsWith('-right')) {
-        return {
-          x: pos.x + handleElement.getBoundingClientRect().width,
-          y: pos.y + (handleElement.getBoundingClientRect().height / 2),
-        };
-      } else if (handle.endsWith('-left')) {
-        return {
-          x: pos.x,
-          y: pos.y + (handleElement.getBoundingClientRect().height / 2),
-        };
-      }
+        switch (handlePosition) {
+            case 'top':
+                return { x: node.position.x, y: node.position.y + nodeRect.height / 2 };
+            case 'bottom':
+                return { x: node.position.x, y: node.position.y - nodeRect.height / 2 };
+            case 'left':
+                return { x: node.position.x - nodeRect.width / 2, y: node.position.y + nodeRect.height / 2 };
+            case 'right':
+                return { x: node.position.x + nodeRect.width / 2, y: node.position.y + nodeRect.height / 2 };
+            default:
+                return { x: node.position.x, y: node.position.y };
+        }
     };
 
 
     sourceHandles.forEach(sourceHandle => {
         targetHandles.forEach(targetHandle => {
-            const sourceDetails = getHandleDetails(sourceNode.position, sourceHandle, sourceElement);
-            const targetDetails = getHandleDetails(targetNode.position, targetHandle, targetElement);
+            const sourceCoords = getHandleCoords(sourceNode, sourceHandle);
+            const targetCoords = getHandleCoords(targetNode, targetHandle);
 
-            if (sourceDetails && targetDetails) {
-                 const distance = Math.sqrt(Math.pow(sourceNode.position.x - targetNode.position.x, 2) + Math.pow(sourceNode.position.y - targetNode.position.y, 2));
+            const distance = Math.sqrt(Math.pow(sourceCoords.x - targetCoords.x, 2) + Math.pow(sourceCoords.y - targetCoords.y, 2));
 
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    bestConnection = {
-                        sourceHandle: sourceHandle,
-                        targetHandle: targetHandle,
-                    };
-                }
+            if (distance < minDistance) {
+                minDistance = distance;
+                bestConnection = {
+                    sourceHandle: sourceHandle,
+                    targetHandle: targetHandle,
+                };
             }
         });
     });

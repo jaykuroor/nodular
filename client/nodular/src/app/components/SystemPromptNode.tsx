@@ -55,7 +55,7 @@ export default function SystemNode({ data }: { data: any }) {
             <Handle type="source" position={Position.Top} id= {bubble.id + "-top"} className="!invisible" isConnectable={isConnectable} />
             <Handle type="source" position={Position.Right} id= {bubble.id + "-right"} className="!invisible" isConnectable={isConnectable} />
             <Handle type="source" position={Position.Left} id= {bubble.id + "-left"} className="!invisible" isConnectable={isConnectable} />
-            <Handle type="source" position={Position.Bottom} id= {bubble.id + "-bottom"} className="!invisible hidden" isConnectable={isConnectable} />
+            <Handle type="source" position={Position.Bottom} id= {bubble.id + "-bottom"} className="!invisible" isConnectable={isConnectable} />
 
 
             <header className="drag-handle cursor-pointer flex items-center justify-between rounded-t-xl px-4 py-2 peer bg-slate-800/50">
