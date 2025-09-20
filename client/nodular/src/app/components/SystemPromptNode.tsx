@@ -51,7 +51,7 @@ export default function SystemNode({ data }: { data: any }) {
 
 
     return (
-        <div className={nodeClasses}>
+        <div className={nodeClasses} id={bubble.id}>
             <Handle type="source" position={Position.Top} id= {bubble.id + "-top"} className="!invisible" isConnectable={isConnectable} />
             <Handle type="source" position={Position.Right} id= {bubble.id + "-right"} className="!invisible" isConnectable={isConnectable} />
             <Handle type="source" position={Position.Left} id= {bubble.id + "-left"} className="!invisible" isConnectable={isConnectable} />

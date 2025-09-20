@@ -28,8 +28,6 @@ import {
     Position,
 } from '@xyflow/react';
 
-import type { NodeHandle } from '@xyflow/system';
-
 import { BoardState, Message, ChatBubbleType, LLMProvider, ViewMode } from '../types';
 import Sidebar from './Sidebar';
 import BoardHeader from './BoardHeader';
@@ -54,7 +52,6 @@ const initialBoard: BoardState = {
             type: 'system',
             llm: 'gpt-oss-120b',
             temperature: 0.7,
-            handles: [],
         },
         {
             id: 'bubble-1',
@@ -66,7 +63,6 @@ const initialBoard: BoardState = {
             isShrunk: false,
             type: 'message',
             parentId: 'bubble-0', // Connect to System Prompt
-            handles: [],
         },
         {
             id: 'bubble-2',
@@ -78,7 +74,6 @@ const initialBoard: BoardState = {
             ],
             isShrunk: false,
             type: 'message',
-            handles: [],
         },
     ],
     viewMode: 'zoomed-out'
@@ -96,45 +91,77 @@ const nodeTypes = {
 };
 
 const getClosestConnectionPoint = (sourceNode: Node<{ bubble: ChatBubbleType }>, targetNode: Node<{ bubble: ChatBubbleType }>) => {
-    const sourceBubble = sourceNode.data.bubble;
-    const targetBubble = targetNode.data.bubble;
 
-    let sourceHandles = sourceBubble.handles.filter(h => h.type === 'source');
-    let targetHandles = targetBubble.handles.filter(h => h.type === 'target');
+    const sourceElement = document.getElementById(sourceNode.id);
+    const targetElement = document.getElementById(targetNode.id);
+    
+    const sourceHandles: string[] = [`${sourceNode.id}-bottom`];
+    const targetHandles: string[] = [`${sourceNode.id}-top`];
+
+    if (!sourceElement || !targetElement) {
+        return { sourceHandle: sourceHandles[0], targetHandle: targetHandles[0] };
+    }
+    
+    if (sourceNode.data.bubble.type === 'file'){
+      const sourceHandles: string[] = ['top', 'right', 'bottom', 'left'].map(pos => `${sourceNode.id}-${pos}`);
+    } else if (sourceNode.data.bubble.type === 'system'){
+      const sourceHandles: string[] = ['top', 'right', 'left'].map(pos => `${sourceNode.id}-${pos}`);
+      const targetHandles: string[] = ['right', 'left'].map(pos => `${targetNode.id}-${pos}`);
+    } else if (sourceNode.data.bubble.type === 'message' && sourceNode.data.bubble.messages[0]?.sender === 'human') {
+      const targetHandles: string[] = ['top', 'right', 'left'].map(pos => `${targetNode.id}-${pos}`);
+    } else if (sourceNode.data.bubble.type === 'message' && sourceNode.data.bubble.messages[0]?.sender === 'ai') {
+      const targetHandles: string[] = ['right', 'left'].map(pos => `${targetNode.id}-${pos}`);
+    }
+
 
     let minDistance = Infinity;
-    let bestConnection = { sourceHandle: null, targetHandle: null };
+    let bestConnection = { sourceHandle: sourceHandles[0], targetHandle: targetHandles[0] };
 
-    const getHandleCoord = (node: Node<{ bubble: ChatBubbleType }>, handle: any) => {
-        const { x, y } = node.position;
-        const width = node.width || 0;
-        const height = node.height || 0;
+    interface Coordinates {
+      x: number;
+      y: number;
+    }
 
-        switch (handle.position) {
-            case Position.Top:
-                return { x: x + width / 2, y };
-            case Position.Right:
-                return { x: x + width, y: y + height / 2 };
-            case Position.Bottom:
-                return { x: x + width / 2, y: y + height };
-            case Position.Left:
-                return { x, y: y + height / 2 };
-            default: return { x, y };
-        }
+    const getHandleDetails = (pos: Coordinates, handle: string, handleElement: Element) => {
+      if (handle.endsWith('-top')) {
+        return {
+          x: pos.x + (handleElement.getBoundingClientRect().width / 2),
+          y: pos.y + (handleElement.getBoundingClientRect().height / 2),
+        };
+      } else if (handle.endsWith('-bottom')) {
+        return {
+          x: pos.x + (handleElement.getBoundingClientRect().width / 2),
+          y: pos.y + (handleElement.getBoundingClientRect().height / 2),
+        };
+      } else if (handle.endsWith('-right')) {
+        return {
+          x: pos.x + handleElement.getBoundingClientRect().width,
+          y: pos.y + (handleElement.getBoundingClientRect().height / 2),
+        };
+      } else if (handle.endsWith('-left')) {
+        return {
+          x: pos.x,
+          y: pos.y + (handleElement.getBoundingClientRect().height / 2),
+        };
+      }
     };
+
 
     sourceHandles.forEach(sourceHandle => {
         targetHandles.forEach(targetHandle => {
-            const sourcePos = getHandleCoord(sourceNode, sourceHandle);
-            const targetPos = getHandleCoord(targetNode, targetHandle);
-            const distance = Math.sqrt(Math.pow(sourcePos.x - targetPos.x, 2) + Math.pow(sourcePos.y - targetPos.y, 2));
+            const sourceDetails = getHandleDetails(sourceNode.position, sourceHandle, sourceElement);
+            const targetDetails = getHandleDetails(targetNode.position, targetHandle, targetElement);
 
-            if (distance < minDistance) {
-                minDistance = distance;
-                bestConnection = {
-                    sourceHandle: sourceHandle.id,
-                    targetHandle: targetHandle.id,
-                };
+            if (sourceDetails && targetDetails) {
+                 const distance = Math.sqrt(Math.pow(sourceNode.position.x - targetNode.position.x, 2) + Math.pow(sourceNode.position.y - targetNode.position.y, 2));
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    bestConnection = {
+                        sourceHandle: sourceHandle,
+                        targetHandle: targetHandle,
+                    };
+                }
             }
         });
     });
@@ -386,8 +413,7 @@ function FlowBoard() {
                 position: newPosition,
                 isShrunk: false,
                 type: 'message',
-                parentId: parentNode.id,
-                handles: [],
+                parentId: parentNode.id
             };
 
             return { ...prev, bubbles: [...prev.bubbles, newBubble] };
@@ -436,38 +462,7 @@ function FlowBoard() {
     };
 
     useEffect(() => {
-        const bubblesWithHandles = boardState.bubbles.map(bubble => {
-            const newHandles: NodeHandle[] = [];
-            const isHuman = bubble.messages[0]?.sender === 'human';
-            const isAI = bubble.messages[0]?.sender === 'ai';
-
-            if (isAI || (isHuman && bubble.type !== 'file')) {
-                newHandles.push({ id: `${bubble.id}-top`, type: 'target', position: Position.Top });
-            }
-            if (bubble.type === 'file') {
-                newHandles.push({ id: `${bubble.id}-top`, type: 'source', position: Position.Top });
-                newHandles.push({ id: `${bubble.id}-right`, type: 'source', position: Position.Right });
-                newHandles.push({ id: `${bubble.id}-bottom`, type: 'source', position: Position.Bottom });
-                newHandles.push({ id: `${bubble.id}-left`, type: 'source', position: Position.Left });
-            }
-            if (bubble.type === 'message') {
-                newHandles.push({ id: `${bubble.id}-left`, type: 'target', position: Position.Left });
-                newHandles.push({ id: `${bubble.id}-right`, type: 'target', position: Position.Right });
-            }
-            if (isHuman || isAI) {
-                newHandles.push({ id: `${bubble.id}-bottom`, type: 'source', position: Position.Bottom });
-            }
-            if (bubble.type === 'system') {
-                newHandles.push({ id: `${bubble.id}-top`, type: 'source', position: Position.Top });
-                newHandles.push({ id: `${bubble.id}-right`, type: 'source', position: Position.Right });
-                newHandles.push({ id: `${bubble.id}-left`, type: 'source', position: Position.Left });
-                newHandles.push({ id: `${bubble.id}-bottom`, type: 'source', position: Position.Bottom });
-                newHandles.push({ id: `${bubble.id}-bottom-button`, type: 'source', position: Position.Bottom });
-            }
-            return { ...bubble, handles: newHandles };
-        });
-
-        const initialNodes = bubblesWithHandles.map((bubble) => {
+        const initialNodes = boardState.bubbles.map((bubble) => {
             let nodeType = 'chatBubble';
             if (bubble.type === 'system') {
                 nodeType = 'system';
@@ -489,14 +484,16 @@ function FlowBoard() {
             };
         });
 
-        const initialEdges = bubblesWithHandles
+        const allNodesForEdges = initialNodes.map(n => ({...n, data: { bubble: n.data.bubble }}));
+
+        const initialEdges = boardState.bubbles
             .filter((bubble) => bubble.parentId)
             .map((bubble): Edge | null => {
-                const parentBubble = bubblesWithHandles.find(b => b.id === bubble.parentId);
+                const parentBubble = boardState.bubbles.find(b => b.id === bubble.parentId);
                 if (parentBubble?.type === 'system') { return null; }
                 let edgeStyle = {};
-                const sourceNode = initialNodes.find(n => n.id === bubble.parentId);
-                const targetNode = initialNodes.find(n => n.id === bubble.id);
+                const sourceNode = allNodesForEdges.find(n => n.id === bubble.parentId);
+                const targetNode = allNodesForEdges.find(n => n.id === bubble.id);
 
                 if (!sourceNode || !targetNode) return null;
 
@@ -522,13 +519,13 @@ function FlowBoard() {
                 };
             }).filter((edge): edge is Edge => edge !== null);
 
-        const systemEdges = bubblesWithHandles
+        const systemEdges = boardState.bubbles
             .filter((bubble) => bubble.parentId)
             .map((bubble): Edge | null => {
-                const parentBubble = bubblesWithHandles.find(b => b.id === bubble.parentId);
+                const parentBubble = boardState.bubbles.find(b => b.id === bubble.parentId);
                 if (parentBubble?.type !== 'system') { return null; }
-                const sourceNode = initialNodes.find(n => n.id === bubble.parentId);
-                const targetNode = initialNodes.find(n => n.id === bubble.id);
+                const sourceNode = allNodesForEdges.find(n => n.id === bubble.parentId);
+                const targetNode = allNodesForEdges.find(n => n.id === bubble.id);
 
                 if (sourceNode && targetNode) {
                     const { sourceHandle, targetHandle } = getClosestConnectionPoint(
@@ -548,11 +545,11 @@ function FlowBoard() {
                 return null;
             }).filter((edge): edge is Edge => edge !== null);
 
-        const fileEdges = bubblesWithHandles
+        const fileEdges = boardState.bubbles
             .filter(bubble => bubble.connectedTo)
             .map((bubble): Edge | null => {
-                const sourceNode = initialNodes.find(n => n.id === bubble.id);
-                const targetNode = initialNodes.find(n => n.id === bubble.connectedTo);
+                const sourceNode = allNodesForEdges.find(n => n.id === bubble.id);
+                const targetNode = allNodesForEdges.find(n => n.id === bubble.connectedTo);
 
                 if (sourceNode && targetNode) {
                     const { sourceHandle, targetHandle } = getClosestConnectionPoint(
@@ -597,7 +594,6 @@ function FlowBoard() {
             isShrunk: false,
             type: 'message',
             parentId: parentNode?.id,
-            handles: [],
         };
 
         setBoardState(prev => ({
@@ -628,8 +624,7 @@ function FlowBoard() {
             file,
             isShrunk: true,
             type: 'file',
-            fileUrl: URL.createObjectURL(file),
-            handles: [],
+            fileUrl: URL.createObjectURL(file)
         }));
 
         setBoardState(prev => ({
