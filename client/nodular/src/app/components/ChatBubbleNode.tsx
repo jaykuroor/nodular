@@ -45,7 +45,7 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
     }, [bubble.id, onAddNode]);
 
     return (
-        <div className={`${isAI ? `response-node` : `glass-pane`} flex flex-col shadow-2xl group z-20 rounded-xl ${bgColor} ${bubble.type === 'file' && !bubble.isShrunk ? 'max-w-210' : 'w-80vh'} ${isFileConnecting && isHuman ? 'prompt-connectable' : ''}`}>
+        <div id={bubble.id} className={`${isAI ? `response-node` : `glass-pane`} flex flex-col shadow-2xl group z-20 rounded-xl ${bgColor} ${bubble.type === 'file' && !bubble.isShrunk ? 'max-w-210' : 'w-80vh'} ${isFileConnecting && isHuman ? 'prompt-connectable' : ''}`}>
             {/* Top handle for AI responses and human prompts */}
             {(isAI || (isHuman && bubble.type !== 'file')) && (
                 <Handle 
