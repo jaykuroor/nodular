@@ -4,7 +4,7 @@ import {
   EdgeLabelRenderer,
   getSmoothStepPath,
   useReactFlow,
-  type EdgeProps,
+  EdgeProps,
 } from '@xyflow/react';
 import { X } from 'lucide-react';
 
@@ -30,7 +30,9 @@ export default function ButtonEdge({
   });
 
   const onEdgeClick = () => {
-    data.onEdgeClick(id);
+    if (data && data.onEdgeClick) {
+      console.log(data);
+    }
   };
 
   return (
