@@ -68,6 +68,12 @@ body.connecting-file {
     outline-offset: 3px;
 }
 
+.selected-node {
+    outline: 4px solid #d3dae2 !important;
+    border-radius: 0.75rem;
+    box-shadow: white 0px 0px 2px, white 0px 0px 2px;
+}
+
 /* Custom React Flow Controls */
 .react-flow__controls {
   box-shadow: none;

@@ -52,7 +52,7 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
                     type="target" 
                     position={Position.Top} 
                     isConnectable={isConnectable}
-                    className="!bg-teal-500"
+                    className="!invisible"
                     id= {bubble.id + "-top"}
                 />
             )}
@@ -60,10 +60,10 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
             {/* Handles for file connections */}
             {bubble.type === 'file' && (
                 <>
-                    <Handle type="source" position={Position.Top} id= {bubble.id + "-top"} className="!bg-rose-500" isConnectable={isConnectable} />
-                    <Handle type="source" position={Position.Right} id= {bubble.id + "-right"} className="!bg-rose-500" isConnectable={isConnectable} />
-                    <Handle type="source" position={Position.Bottom} id= {bubble.id + "-bottom"} className="!bg-rose-500" isConnectable={isConnectable} />
-                    <Handle type="source" position={Position.Left} id= {bubble.id + "-left"} className="!bg-rose-500" isConnectable={isConnectable} />
+                    <Handle type="source" position={Position.Top} id= {bubble.id + "-top"} className="!invisible" isConnectable={isConnectable} />
+                    <Handle type="source" position={Position.Right} id= {bubble.id + "-right"} className="!invisible" isConnectable={isConnectable} />
+                    <Handle type="source" position={Position.Bottom} id= {bubble.id + "-bottom"} className="!invisible" isConnectable={isConnectable} />
+                    <Handle type="source" position={Position.Left} id= {bubble.id + "-left"} className="!invisible" isConnectable={isConnectable} />
                 </>
             )}
             
@@ -75,14 +75,14 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
                         position={Position.Left} 
                         id= {bubble.id + "-left"}
                         isConnectable={isConnectable}
-                        className="!bg-teal-500"
+                        className="!invisible"
                     />
                     <Handle 
                         type="target" 
                         position={Position.Right} 
                         id= {bubble.id + "-right"}
                         isConnectable={isConnectable}
-                        className="!bg-teal-500"
+                        className="!invisible"
                     />
                 </>
             )}

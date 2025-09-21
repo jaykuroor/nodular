@@ -31,13 +31,13 @@ import {
 import { BoardState, Message, ChatBubbleType, LLMProvider, ViewMode } from '../types';
 import Sidebar from './Sidebar';
 import BoardHeader from './BoardHeader';
-import Composer from './Composer';
 import Guide from './Guide';
 import ChatBubbleNode from './ChatBubbleNode';
 import DisconnectModal from './DisconnectModal';
 import ButtonEdge from './ButtonEdge';
 import SystemNode from './SystemPromptNode';
 import Watermark from './Watermark';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 
 const initialBoard: BoardState = {
     id: 'board-1',
@@ -166,7 +166,7 @@ const getClosestConnectionPoint = (sourceNode: Node<{ bubble: ChatBubbleType }>,
 
 function FlowBoard() {
     const [boardState, setBoardState] = useState<BoardState>(initialBoard);
-    const [nodes, setNodes] = useState<Node<{ bubble: ChatBubbleType }>[]>([]);
+    const [nodes, setNodes] = useState<Node<{ bubble: ChatBubbleType, onUpdateText: (text: string) => void, isSelected: boolean }>[]>([]);
     const [edges, setEdges] = useState<Edge[]>([]);
     const [selectedLLM, setSelectedLLM] = useState<LLMProvider>('gpt-oss-120b');
     const [showGuide, setShowGuide] = useState(true);
@@ -177,10 +177,11 @@ function FlowBoard() {
     const [edgeToDisconnect, setEdgeToDisconnect] = useState<Edge | null>(null);
     const [connectingNode, setConnectingNode] = useState<any>(null);
     const [targetNode, setTargetNode] = useState<Node<{ bubble: ChatBubbleType }> | null>(null);
+    const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
     const onNodesChange: OnNodesChange = useCallback(
         (changes: NodeChange[]) => {
-            setNodes((nds) => applyNodeChanges(changes, nds as Node[]) as Node<{ bubble: ChatBubbleType }>[]); // ensure correct type
+            setNodes((nds) => applyNodeChanges(changes, nds as Node[]) as Node<{ bubble: ChatBubbleType, onUpdateText: (text: string) => void, isSelected: boolean }>[]);
         },
         [setNodes]
     );
@@ -400,7 +401,7 @@ function FlowBoard() {
                 title: 'New Prompt',
                 messages: [{
                     id: `msg-${Date.now()}`,
-                    text: 'New prompt...',
+                    text: '',
                     sender: 'human',
                     timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric' }),
                 }],
@@ -410,6 +411,7 @@ function FlowBoard() {
                 parentId: parentNode.id
             };
 
+            setSelectedNodeId(newBubble.id);
             return { ...prev, bubbles: [...prev.bubbles, newBubble] };
         });
     }, [setBoardState]);
@@ -450,6 +452,23 @@ function FlowBoard() {
         }));
     }, [setBoardState]);
 
+    const onUpdateNodeText = useCallback((nodeId: string, text: string) => {
+        setBoardState(prev => ({
+            ...prev,
+            bubbles: prev.bubbles.map(bubble => {
+                if (bubble.id === nodeId) {
+                    const newMessages = [...bubble.messages];
+                    newMessages[0] = { ...newMessages[0], text };
+                    return { ...bubble, messages: newMessages };
+                }
+                return bubble;
+            })
+        }));
+    }, [setBoardState]);
+
+    const onNodeClick = (_: React.MouseEvent, node: Node) => {
+        setSelectedNodeId(node.id);
+    };
 
     const edgeTypes = {
         buttonedge: (props: any) => <ButtonEdge {...props} data={{ ...props.data, onEdgeClick }} />,
@@ -473,8 +492,11 @@ function FlowBoard() {
                     onAddNode: addNode,
                     isConnecting: !!connectingNode,
                     connectingNode,
-                    onUpdateSystemNode: updateSystemNode
+                    onUpdateSystemNode: updateSystemNode,
+                    onUpdateText: (text: string) => onUpdateNodeText(bubble.id, text),
+                    isSelected: selectedNodeId === bubble.id,
                 },
+                className: selectedNodeId === bubble.id ? 'selected-node' : '',
             };
         });
 
@@ -565,36 +587,10 @@ function FlowBoard() {
                 return null;
             }).filter((edge): edge is Edge => edge !== null);
 
-        setNodes(initialNodes);
+        setNodes(initialNodes as Node<{ bubble: ChatBubbleType, onUpdateText: (text: string) => void, isSelected: boolean }>[]);
         setEdges([...initialEdges, ...systemEdges, ...fileEdges]);
-    }, [boardState.bubbles, removeNode, toggleShrink, connectingNode, addNode, updateSystemNode]);
+    }, [boardState.bubbles, removeNode, toggleShrink, connectingNode, addNode, updateSystemNode, selectedNodeId]);
 
-    const handleSendMessage = (text: string, bubbleId: string) => {
-        const parentNode = nodes.find((n) => n.id === bubbleId) || nodes[nodes.length - 1];
-        const newPosition = parentNode
-            ? { x: parentNode.position.x + 400, y: parentNode.position.y }
-            : { x: 50, y: 50 };
-
-        const newBubble: ChatBubbleType = {
-            id: `bubble-${Date.now()}`,
-            title: 'New Message',
-            messages: [{
-                id: `msg-${Date.now()}`,
-                text,
-                sender: 'human',
-                timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric' }),
-            }],
-            position: newPosition,
-            isShrunk: false,
-            type: 'message',
-            parentId: parentNode?.id,
-        };
-
-        setBoardState(prev => ({
-            ...prev,
-            bubbles: [...prev.bubbles, newBubble]
-        }));
-    };
 
     const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
@@ -636,6 +632,31 @@ function FlowBoard() {
 
     const proOptions = { hideAttribution: true };
 
+    const handleNext = () => {
+        if (!selectedNodeId) return;
+        const children = edges.filter(edge => edge.source === selectedNodeId).map(edge => edge.target);
+        if (children.length === 1) {
+            setSelectedNodeId(children[0]);
+        }
+    };
+
+    const handlePrev = () => {
+        if (!selectedNodeId) return;
+        const parentEdge = edges.find(edge => edge.target === selectedNodeId);
+        if (parentEdge) {
+            setSelectedNodeId(parentEdge.source);
+        }
+    };
+
+    const handleAddPrompt = () => {
+        if (!selectedNodeId) return;
+        addNode(selectedNodeId);
+    };
+
+    const selectedNode = nodes.find(node => node.id === selectedNodeId)?.data.bubble;
+    const childrenCount = selectedNode ? edges.filter(edge => edge.source === selectedNodeId).length : 0;
+    const isResponseNode = selectedNode?.type === 'message' && selectedNode.messages[0]?.sender === 'ai';
+
     return (
         <div className="flex h-screen w-full bg-slate-900">
             <Sidebar
@@ -672,6 +693,7 @@ function FlowBoard() {
                         onConnectEnd={onConnectEnd}
                         onNodeMouseEnter={(_: React.MouseEvent, node: Node<any>) => setTargetNode(node as Node<{ bubble: ChatBubbleType }>)}
                         onNodeMouseLeave={() => setTargetNode(null)}
+                        onNodeClick={onNodeClick}
                         fitView
                         panOnDrag={!nodes.some(n => n.selected)}
                         proOptions={proOptions}
@@ -680,8 +702,16 @@ function FlowBoard() {
                         <Controls style={{ top: 20, right: 20, left: 'auto', bottom: 'auto' }} />
                         <Background />
                     </ReactFlow>
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-4">
+                        <button onClick={handlePrev} className="glass-pane p-2 rounded-full hover:!bg-blue-700 hover:cursor-pointer hover:scale-110"><ChevronLeft /></button>
+                        {isResponseNode && (
+                            <button onClick={handleAddPrompt} className="glass-pane p-2 rounded-full hover:!bg-blue-700 hover:cursor-pointer hover:scale-110"><Plus /></button>
+                        )}
+                        {(!isResponseNode || childrenCount <= 1) && (
+                            <button onClick={handleNext} className="glass-pane p-2 rounded-full hover:!bg-blue-700 hover:cursor-pointer hover:scale-110"><ChevronRight /></button>
+                        )}
+                    </div>
                 </main>
-                <Composer bubbles={boardState.bubbles} onSendMessage={handleSendMessage} />
             </div>
             <DisconnectModal
                 isOpen={isDisconnectModalOpen}
