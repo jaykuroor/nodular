@@ -108,7 +108,11 @@ const getClosestConnectionPoint = (sourceNode: Node<{ bubble: ChatBubbleType }>,
     }
 
     if (targetNode.data.bubble.type === 'message' && targetNode.data.bubble.messages[0]?.sender === 'human') {
-        targetHandles = ['top', 'right', 'left'].map(pos => `${targetNode.id}-${pos}`);
+        if (sourceNode.data.bubble.type === 'system' || (sourceNode.data.bubble.type === 'message' && sourceNode.data.bubble.messages[0]?.sender === 'ai')) {
+            targetHandles = [`${targetNode.id}-top`];
+        } else {
+            targetHandles = ['top', 'right', 'left'].map(pos => `${targetNode.id}-${pos}`);
+        }
     } else if (targetNode.data.bubble.type === 'message' && targetNode.data.bubble.messages[0]?.sender === 'ai') {
         targetHandles = ['right', 'left', 'top'].map(pos => `${targetNode.id}-${pos}`);
     }
@@ -119,18 +123,20 @@ const getClosestConnectionPoint = (sourceNode: Node<{ bubble: ChatBubbleType }>,
 
     const getHandleCoords = (node: Node, handleId: string) => {
         const handlePosition = handleId.split('-').pop();
-        const nodeRect = document.getElementById(node.id)?.getBoundingClientRect();
-        if (!nodeRect) return { x: node.position.x, y: node.position.y };
+        const nodeElement = document.getElementById(node.id);
+        if (!nodeElement) return { x: node.position.x, y: node.position.y };
+        const nodeWidth = nodeElement.offsetWidth;
+        const nodeHeight = nodeElement.offsetHeight;
 
         switch (handlePosition) {
             case 'top':
-                return { x: node.position.x, y: node.position.y + nodeRect.height / 2 };
+                return { x: node.position.x + nodeWidth / 2, y: node.position.y };
             case 'bottom':
-                return { x: node.position.x, y: node.position.y - nodeRect.height / 2 };
+                return { x: node.position.x + nodeWidth / 2, y: node.position.y + nodeHeight };
             case 'left':
-                return { x: node.position.x - nodeRect.width / 2, y: node.position.y + nodeRect.height / 2 };
+                return { x: node.position.x, y: node.position.y + nodeHeight / 2 };
             case 'right':
-                return { x: node.position.x + nodeRect.width / 2, y: node.position.y + nodeRect.height / 2 };
+                return { x: node.position.x + nodeWidth, y: node.position.y + nodeHeight / 2 };
             default:
                 return { x: node.position.x, y: node.position.y };
         }
@@ -493,7 +499,7 @@ function FlowBoard() {
                 if (parentBubble?.messages[0]?.sender === 'human') {
                     edgeStyle = { stroke: '#3b82f6', strokeWidth: 2 };
                 } else if (parentBubble?.messages[0]?.sender === 'ai') {
-                    edgeStyle = { stroke: '#10b981', strokeWidth: 2 };
+                    edgeStyle = { stroke: '#ffffff', strokeWidth: 2 };
                 }
 
                 return {
