@@ -47,7 +47,7 @@ export default function SystemNode({ data }: { data: any }) {
         e.stopPropagation();
     };
 
-    const nodeClasses = `glass-pane flex flex-col shadow-2xl group z-20 rounded-xl w-80vw ${isFocused && `nodrag`}`;
+    const nodeClasses = `glass-pane flex flex-col shadow-2xl group z-20 rounded-xl w-[500px] ${isFocused && `nodrag`}`;
 
 
     return (
@@ -79,7 +79,7 @@ export default function SystemNode({ data }: { data: any }) {
                         onFocus={() => setIsFocused(true)}
                         onBlur={() => setIsFocused(false)}
                         onWheel={handleWheel}
-                        className="w-full h-32 rounded-md border border-slate-700 bg-slate-900/70 p-2 text-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                        className="w-full h-32 rounded-md border border-slate-700 bg-slate-900/70 p-2 text-slate-300 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                         placeholder="e.g., You are a helpful assistant for writing code..."
                     />
                 </div>

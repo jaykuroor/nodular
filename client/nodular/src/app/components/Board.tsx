@@ -37,7 +37,18 @@ import DisconnectModal from './DisconnectModal';
 import ButtonEdge from './ButtonEdge';
 import SystemNode from './SystemPromptNode';
 import Watermark from './Watermark';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Send } from 'lucide-react';
+
+interface NodeData {
+    bubble: ChatBubbleType;
+    onRemove: (nodeId: string) => void;
+    onToggleShrink: (nodeId: string) => void;
+    onAddNode: (parentNodeId: string) => void;
+    isConnecting: boolean;
+    connectingNode: any;
+    onUpdateSystemNode: (nodeId: string, prompt: string, temperature: number, llm: LLMProvider) => void;
+    [key: string]: unknown;
+}
 
 const initialBoard: BoardState = {
     id: 'board-1',
@@ -90,16 +101,21 @@ const nodeTypes = {
     system: SystemNode,
 };
 
-const getClosestConnectionPoint = (sourceNode: Node<{ bubble: ChatBubbleType }>, targetNode: Node<{ bubble: ChatBubbleType }>) => {
-    const sourceElement = document.getElementById(sourceNode.id);
-    const targetElement = document.getElementById(targetNode.id);
+const getEstimatedDimensions = (node: Node<{ bubble: ChatBubbleType }>) => {
+    if (node.measured?.width && node.measured?.height) {
+        return { width: node.measured.width, height: node.measured.height };
+    }
+    
+    const type = node.data.bubble.type;
+    if (type === 'file') {
+        return { width: 210, height: 100 }; // Estimate
+    }
+    return { width: 500, height: 200 }; // Estimate for message/system
+};
 
+const getClosestConnectionPoint = (sourceNode: Node<{ bubble: ChatBubbleType }>, targetNode: Node<{ bubble: ChatBubbleType }>) => {
     let sourceHandles: string[] = [`${sourceNode.id}-bottom`];
     let targetHandles: string[] = [`${targetNode.id}-top`];
-
-    if (!sourceElement || !targetElement) {
-        return { sourceHandle: sourceHandles[0], targetHandle: targetHandles[0] };
-    }
 
     if (sourceNode.data.bubble.type === 'file') {
         sourceHandles = ['top', 'right', 'bottom', 'left'].map(pos => `${sourceNode.id}-${pos}`);
@@ -121,22 +137,19 @@ const getClosestConnectionPoint = (sourceNode: Node<{ bubble: ChatBubbleType }>,
     let minDistance = Infinity;
     let bestConnection = { sourceHandle: sourceHandles[0], targetHandle: targetHandles[0] };
 
-    const getHandleCoords = (node: Node, handleId: string) => {
+    const getHandleCoords = (node: Node<{ bubble: ChatBubbleType }>, handleId: string) => {
         const handlePosition = handleId.split('-').pop();
-        const nodeElement = document.getElementById(node.id);
-        if (!nodeElement) return { x: node.position.x, y: node.position.y };
-        const nodeWidth = nodeElement.offsetWidth;
-        const nodeHeight = nodeElement.offsetHeight;
+        const { width, height } = getEstimatedDimensions(node);
 
         switch (handlePosition) {
             case 'top':
-                return { x: node.position.x + nodeWidth / 2, y: node.position.y };
+                return { x: node.position.x + width / 2, y: node.position.y };
             case 'bottom':
-                return { x: node.position.x + nodeWidth / 2, y: node.position.y + nodeHeight };
+                return { x: node.position.x + width / 2, y: node.position.y + height };
             case 'left':
-                return { x: node.position.x, y: node.position.y + nodeHeight / 2 };
+                return { x: node.position.x, y: node.position.y + height / 2 };
             case 'right':
-                return { x: node.position.x + nodeWidth, y: node.position.y + nodeHeight / 2 };
+                return { x: node.position.x + width, y: node.position.y + height / 2 };
             default:
                 return { x: node.position.x, y: node.position.y };
         }
@@ -166,7 +179,7 @@ const getClosestConnectionPoint = (sourceNode: Node<{ bubble: ChatBubbleType }>,
 
 function FlowBoard() {
     const [boardState, setBoardState] = useState<BoardState>(initialBoard);
-    const [nodes, setNodes] = useState<Node<{ bubble: ChatBubbleType, onUpdateText: (text: string) => void, isSelected: boolean }>[]>([]);
+    const [nodes, setNodes] = useState<Node<NodeData>[]>([]);
     const [edges, setEdges] = useState<Edge[]>([]);
     const [selectedLLM, setSelectedLLM] = useState<LLMProvider>('gpt-oss-120b');
     const [showGuide, setShowGuide] = useState(true);
@@ -178,10 +191,22 @@ function FlowBoard() {
     const [connectingNode, setConnectingNode] = useState<any>(null);
     const [targetNode, setTargetNode] = useState<Node<{ bubble: ChatBubbleType }> | null>(null);
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+    const [inputText, setInputText] = useState('');
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            const scrollHeight = textareaRef.current.scrollHeight;
+            const maxHeight = 240; // Approx 10 lines at 24px line-height
+            textareaRef.current.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
+            textareaRef.current.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
+        }
+    }, [inputText]);
 
     const onNodesChange: OnNodesChange = useCallback(
         (changes: NodeChange[]) => {
-            setNodes((nds) => applyNodeChanges(changes, nds as Node[]) as Node<{ bubble: ChatBubbleType, onUpdateText: (text: string) => void, isSelected: boolean }>[]);
+            setNodes((nds) => applyNodeChanges(changes, nds as Node[]) as Node<NodeData>[]);
         },
         [setNodes]
     );
@@ -384,8 +409,14 @@ function FlowBoard() {
     };
 
     const addNode = useCallback((parentNodeId: string) => {
+        setSelectedNodeId(parentNodeId);
+    }, []);
+
+    const createNode = useCallback(() => {
+        if (!selectedNodeId || !inputText.trim()) return;
+
         setBoardState(prev => {
-            const parentNode = prev.bubbles.find(b => b.id === parentNodeId);
+            const parentNode = prev.bubbles.find(b => b.id === selectedNodeId);
             if (!parentNode) return prev;
 
             const parentNodePosition = parentNode.position;
@@ -401,7 +432,7 @@ function FlowBoard() {
                 title: 'New Prompt',
                 messages: [{
                     id: `msg-${Date.now()}`,
-                    text: '',
+                    text: inputText,
                     sender: 'human',
                     timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric' }),
                 }],
@@ -411,10 +442,13 @@ function FlowBoard() {
                 parentId: parentNode.id
             };
 
-            setSelectedNodeId(newBubble.id);
+            // Automatically select the new node? Or keep parent selected?
+            // Usually better to select the new node or clear selection.
+            // Let's keep parent selected for rapid entry, or maybe clear text.
             return { ...prev, bubbles: [...prev.bubbles, newBubble] };
         });
-    }, [setBoardState]);
+        setInputText('');
+    }, [selectedNodeId, inputText, setBoardState]);
 
     const removeNode = useCallback((nodeId: string) => {
         setBoardState(prev => ({
@@ -452,20 +486,6 @@ function FlowBoard() {
         }));
     }, [setBoardState]);
 
-    const onUpdateNodeText = useCallback((nodeId: string, text: string) => {
-        setBoardState(prev => ({
-            ...prev,
-            bubbles: prev.bubbles.map(bubble => {
-                if (bubble.id === nodeId) {
-                    const newMessages = [...bubble.messages];
-                    newMessages[0] = { ...newMessages[0], text };
-                    return { ...bubble, messages: newMessages };
-                }
-                return bubble;
-            })
-        }));
-    }, [setBoardState]);
-
     const onNodeClick = (_: React.MouseEvent, node: Node) => {
         setSelectedNodeId(node.id);
     };
@@ -475,16 +495,20 @@ function FlowBoard() {
     };
 
     useEffect(() => {
+        const currentNodes = reactFlowInstance.getNodes();
         const initialNodes = boardState.bubbles.map((bubble) => {
             let nodeType = 'chatBubble';
             if (bubble.type === 'system') {
                 nodeType = 'system';
             }
 
+            const existingNode = currentNodes.find(n => n.id === bubble.id);
+
             return {
                 id: bubble.id,
                 type: nodeType,
                 position: bubble.position,
+                measured: existingNode?.measured,
                 data: {
                     bubble,
                     onRemove: removeNode,
@@ -493,14 +517,12 @@ function FlowBoard() {
                     isConnecting: !!connectingNode,
                     connectingNode,
                     onUpdateSystemNode: updateSystemNode,
-                    onUpdateText: (text: string) => onUpdateNodeText(bubble.id, text),
-                    isSelected: selectedNodeId === bubble.id,
                 },
                 className: selectedNodeId === bubble.id ? 'selected-node' : '',
             };
         });
 
-        const allNodesForEdges = initialNodes.map(n => ({...n, data: { bubble: n.data.bubble }}));
+        const allNodesForEdges = initialNodes;
 
         const initialEdges = boardState.bubbles
             .filter((bubble) => bubble.parentId)
@@ -587,7 +609,7 @@ function FlowBoard() {
                 return null;
             }).filter((edge): edge is Edge => edge !== null);
 
-        setNodes(initialNodes as Node<{ bubble: ChatBubbleType, onUpdateText: (text: string) => void, isSelected: boolean }>[]);
+        setNodes(initialNodes as Node<NodeData>[]);
         setEdges([...initialEdges, ...systemEdges, ...fileEdges]);
     }, [boardState.bubbles, removeNode, toggleShrink, connectingNode, addNode, updateSystemNode, selectedNodeId]);
 
@@ -650,12 +672,18 @@ function FlowBoard() {
 
     const handleAddPrompt = () => {
         if (!selectedNodeId) return;
-        addNode(selectedNodeId);
+        // addNode(selectedNodeId); // This was the old behavior
     };
 
     const selectedNode = nodes.find(node => node.id === selectedNodeId)?.data.bubble;
     const childrenCount = selectedNode ? edges.filter(edge => edge.source === selectedNodeId).length : 0;
     const isResponseNode = selectedNode?.type === 'message' && selectedNode.messages[0]?.sender === 'ai';
+    const isSystemNode = selectedNode?.type === 'system';
+    const showInputBar = isResponseNode || isSystemNode;
+
+    const potentialParents = nodes
+        .filter(n => n.data.bubble.type === 'system' || (n.data.bubble.type === 'message' && n.data.bubble.messages[0]?.sender === 'ai'))
+        .map(n => ({ id: n.id, title: n.data.bubble.title }));
 
     return (
         <div className="flex h-screen w-full bg-slate-900">
@@ -702,14 +730,56 @@ function FlowBoard() {
                         <Controls style={{ top: 20, right: 20, left: 'auto', bottom: 'auto' }} />
                         <Background />
                     </ReactFlow>
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-4">
-                        <button onClick={handlePrev} className="glass-pane p-2 rounded-full hover:!bg-blue-700 hover:cursor-pointer hover:scale-110"><ChevronLeft /></button>
-                        {isResponseNode && (
-                            <button onClick={handleAddPrompt} className="glass-pane p-2 rounded-full hover:!bg-blue-700 hover:cursor-pointer hover:scale-110"><Plus /></button>
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-4 items-end w-full max-w-3xl px-4 pointer-events-none">
+                        <div className="pointer-events-auto flex gap-4 mx-auto items-end">
+                        <button onClick={handlePrev} className="glass-pane p-2 rounded-full hover:!bg-blue-700 hover:cursor-pointer hover:scale-110 h-10 w-10 flex items-center justify-center"><ChevronLeft /></button>
+                        
+                        {showInputBar && (
+                            <div className="glass-pane p-2 rounded-xl flex flex-col gap-2 items-end bg-slate-800/90 backdrop-blur-md border border-slate-700 shadow-2xl">
+                                
+                                <div className="flex-1 min-w-[600px]">
+                                    <textarea
+                                        ref={textareaRef}
+                                        value={inputText}
+                                        onChange={(e) => setInputText(e.target.value)}
+                                        placeholder="Type your prompt here..."
+                                        className="w-full bg-slate-900/40 rounded-md text-lg text-slate-200 p-2 focus:outline-none focus:border-blue-500 resize-none min-h-[40px]"
+                                        style={{ height: 'auto', minHeight: '40px' }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                createNode();
+                                            }
+                                        }}
+                                    />
+                                </div>
+                                <div className="w-full flex justify-between">
+                                    <div className="flex flex-col gap-1">
+                                        <select 
+                                            value={selectedNodeId || ''} 
+                                            onChange={(e) => setSelectedNodeId(e.target.value)}
+                                            className="bg-slate-900 border border-slate-700 rounded-md text-md text-slate-300 p-1.5 focus:outline-none focus:border-blue-500 max-w-[150px]"
+                                        >
+                                            {potentialParents.map(p => (
+                                                <option key={p.id} value={p.id}>{p.title}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <button 
+                                        onClick={createNode}
+                                        disabled={!inputText.trim()}
+                                        className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed h-10 w-10 flex items-center justify-center mb-[1px]"
+                                    >
+                                        <Send size={18} />
+                                    </button>
+                                </div>
+                            </div>
                         )}
+
                         {(!isResponseNode || childrenCount <= 1) && (
-                            <button onClick={handleNext} className="glass-pane p-2 rounded-full hover:!bg-blue-700 hover:cursor-pointer hover:scale-110"><ChevronRight /></button>
+                            <button onClick={handleNext} className="glass-pane p-2 rounded-full hover:!bg-blue-700 hover:cursor-pointer hover:scale-110 h-10 w-10 flex items-center justify-center"><ChevronRight /></button>
                         )}
+                        </div>
                     </div>
                 </main>
             </div>

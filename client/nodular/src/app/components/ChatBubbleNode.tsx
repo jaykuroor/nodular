@@ -2,9 +2,10 @@
 
 import { Handle, Position, useNodeId } from '@xyflow/react';
 import { ChatBubbleType } from '../types';
-import { MoreHorizontal, MessageSquare, MessageSquareMore, Maximize2, Minimize2, GripHorizontal, X, CloudUpload, GitBranch } from 'lucide-react';
+import { MoreHorizontal, MessageSquare, MessageSquareMore, Maximize2, Minimize2, GripHorizontal, X, CloudUpload, GitBranch, Plus } from 'lucide-react';
 import MessageNode from './MessageNode';
 import FileNode from './FileNode';
+import { ButtonHandle } from './ButtonHandle';
 import { useCallback, useEffect } from 'react';
 
 interface ChatBubbleNodeProps {
@@ -45,7 +46,7 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
     }, [bubble.id, onAddNode]);
 
     return (
-        <div id={bubble.id} className={`${isAI ? `response-node` : `glass-pane`} flex flex-col shadow-2xl group z-20 rounded-xl ${bgColor} ${bubble.type === 'file' && !bubble.isShrunk ? 'max-w-210' : 'w-80vh'} ${isFileConnecting && isHuman ? 'prompt-connectable' : ''}`}>
+        <div id={bubble.id} className={`${isAI ? `response-node` : `glass-pane`} flex flex-col shadow-2xl group z-20 rounded-xl ${bgColor} ${bubble.type === 'file' && !bubble.isShrunk ? 'max-w-210' : 'max-w-[600px]'} ${isFileConnecting && isHuman ? 'prompt-connectable' : ''}`}>
             {/* Top handle for AI responses and human prompts */}
             {(isAI || (isHuman && bubble.type !== 'file')) && (
                 <Handle 
@@ -156,6 +157,17 @@ export default function ChatBubbleNode({ data, isConnectable }: ChatBubbleNodePr
                     isConnectable={isConnectable}
                     className="!invisible"
                 />
+            )}
+
+            {isAI && (
+                <ButtonHandle type="source" position={Position.Bottom} id={bubble.id + "-bottom-button"}>
+                    <button
+                        onClick={handleAddNode}
+                        className="p-1 rounded-full bg-gray-300 text-gray-700 hover:bg-gray-400"
+                    >
+                        <Plus size={12} />
+                    </button>
+                </ButtonHandle>
             )}
         </div>
     );
